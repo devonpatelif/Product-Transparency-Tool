@@ -1,0 +1,14 @@
+# ──────────────────────────────────────────────────────────────
+# ADD THESE RULES to the .htaccess file in the same folder as
+# index3.html, api-data.php, and IVData.json.
+#
+# If there is no .htaccess in that folder, create one with just
+# these lines. If one already exists, add these lines at the TOP.
+# ──────────────────────────────────────────────────────────────
+
+# Block direct public access to the raw JSON data file.
+# Only PHP running on the server can read it.
+<Files "IVData.json">
+    Order Allow,Deny
+    Deny from all
+</Files>
