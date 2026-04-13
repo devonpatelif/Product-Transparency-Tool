@@ -331,15 +331,18 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .table-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
 .table-wrap::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.15)}
 
-/* ===== MOBILE SCAN SCREEN ===== */
-.scan-screen{display:none}
-@media(max-width:768px){
-  .scan-screen{position:fixed;inset:0;z-index:200;background:var(--bg-deep);display:flex;align-items:center;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
-  .scan-screen::before{content:'';position:absolute;inset:0;background:
-    radial-gradient(ellipse 60% 50% at 30% 20%,rgba(194,213,1,.06),transparent),
-    radial-gradient(ellipse 50% 40% at 70% 80%,rgba(59,130,246,.06),transparent);pointer-events:none}
-  .scan-screen.hidden{display:none}
-}
+/* ===== SCAN INVOICE SCREEN ===== */
+.scan-screen{position:fixed;inset:0;z-index:200;background:var(--bg-deep);display:flex;align-items:center;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scan-screen::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(ellipse 60% 50% at 30% 20%,rgba(194,213,1,.06),transparent),
+  radial-gradient(ellipse 50% 40% at 70% 80%,rgba(59,130,246,.06),transparent);pointer-events:none}
+.scan-screen.hidden{display:none}
+
+/* Toolbar scan button */
+.scan-toolbar-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid rgba(194,213,1,.25);border-radius:var(--radius-lg);background:rgba(194,213,1,.08);color:var(--lime);font-size:12px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:all .25s ease;white-space:nowrap;letter-spacing:.3px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.scan-toolbar-btn:hover{background:rgba(194,213,1,.15);border-color:rgba(194,213,1,.4);box-shadow:0 4px 16px rgba(194,213,1,.12);transform:translateY(-1px)}
+.scan-toolbar-btn:active{transform:translateY(1px);box-shadow:none}
+.scan-toolbar-btn svg{flex-shrink:0}
 .scan-inner{position:relative;z-index:1;width:100%;max-width:420px;padding:32px 24px;text-align:center;margin:0 auto}
 .scan-logo{color:var(--lime);margin-bottom:20px;filter:drop-shadow(0 0 20px rgba(194,213,1,.3))}
 .scan-title{font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:8px;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -399,6 +402,7 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
   .filter-chips{order:2}
   .filter-select{order:3}
   .result-count{order:4;text-align:left}
+  .scan-toolbar-btn{order:5;justify-content:center}
   .table-wrap{padding:0 8px}
   .pagination{padding:10px 16px}
   td,th{padding:8px 10px;font-size:12px}
@@ -514,6 +518,8 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 [data-theme="light"] .scan-result-card .card-check.checked::after{color:#fff}
 [data-theme="light"] .card-match-badge.badge-matched{background:rgba(5,150,105,.08);color:var(--success);border-color:rgba(5,150,105,.15)}
 [data-theme="light"] .card-match-badge.badge-unmatched{background:rgba(234,88,12,.06);color:var(--warning);border-color:rgba(234,88,12,.1)}
+[data-theme="light"] .scan-toolbar-btn{background:rgba(24,86,65,.06);border-color:rgba(24,86,65,.2);color:var(--green-brand)}
+[data-theme="light"] .scan-toolbar-btn:hover{background:rgba(24,86,65,.12);border-color:rgba(24,86,65,.3);box-shadow:0 4px 16px rgba(24,86,65,.08)}
 
 /* Theme toggle */
 .theme-toggle{position:fixed;top:16px;right:16px;z-index:50;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);color:var(--text-secondary)}
@@ -599,6 +605,11 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
       <div class="custom-dropdown-menu" id="menu-vendor"></div>
     </div>
     <div class="result-count" id="result-count"></div>
+    <button class="scan-toolbar-btn" id="scan-toolbar-btn" title="Scan invoice or quote with AI">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Scan Invoice
+    </button>
+    <input type="file" accept="image/*,application/pdf" id="scan-desktop-file" hidden>
   </div>
 </div>
 
@@ -647,16 +658,16 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
       </div>
       <h2 class="scan-title">Scan Your Invoice</h2>
-      <p class="scan-desc">Take a photo or upload a supplier invoice, quote, or price list. AI will extract the pricing details automatically.</p>
+      <p class="scan-desc">Take a photo or upload a supplier invoice, quote, or price list (images or PDF). AI will extract the pricing details automatically.</p>
       <label class="scan-btn scan-btn-primary" id="scan-capture-label">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
         Take Photo
-        <input type="file" accept="image/*" capture="environment" id="scan-capture" hidden>
+        <input type="file" accept="image/*,application/pdf" capture="environment" id="scan-capture" hidden>
       </label>
       <label class="scan-btn scan-btn-secondary" id="scan-gallery-label">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         Upload from Gallery
-        <input type="file" accept="image/*" id="scan-gallery" hidden>
+        <input type="file" accept="image/*,application/pdf" id="scan-gallery" hidden>
       </label>
       <button class="scan-skip" id="scan-skip">Browse products manually</button>
     </div>
@@ -787,6 +798,7 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 <!-- ═══════════════ TOOLTIP ═══════════════ -->
 <div class="tooltip" id="tooltip"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════
    CONFIGURATION
@@ -1825,7 +1837,8 @@ function bindEvents() {
 /* ═══════════════════════════════════════════════════════════
    MOBILE SCAN SCREEN LOGIC
    ═══════════════════════════════════════════════════════════ */
-const SCAN_API_URL = _isProd ? 'api-analyze.php' : 'api-analyze.php';
+const SCAN_API_URL = 'api-analyze.php';
+const SCAN_PROMPT = 'You are analyzing a supplier pricing document (invoice, quote, or price list) for industrial paint and coatings products. Extract every line item you can find.\n\nFor each item, extract:\n- partNumber: The part/item/SKU number (look for columns labeled Part #, Item #, SKU, Product Code, etc.)\n- description: Product name/description\n- quantity: Number of units (default 1 if not shown)\n- unitPrice: Price per unit the customer pays (numeric, no $ sign)\n- discountPercent: Discount percentage if shown (numeric, no % sign; 0 if not listed)\n\nReturn ONLY a JSON array with no markdown formatting, no code fences, no other text:\n[{"partNumber":"...","description":"...","quantity":1,"unitPrice":0.00,"discountPercent":0}]\n\nIf you cannot find any line items, return an empty array: []';
 let scanResults = []; // holds matched/unmatched items after AI analysis
 
 function isMobile() {
@@ -1998,6 +2011,107 @@ function confirmScanResults() {
   openPanel();
 }
 
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function pdfToImages(file) {
+  // Render PDF pages to PNG images using PDF.js
+  const arrayBuf = await file.arrayBuffer();
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+  const pageCount = Math.min(pdf.numPages, 10); // cap at 10 pages
+  const images = [];
+
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdf.getPage(i);
+    const scale = 2; // 2x for readability
+    const viewport = page.getViewport({ scale: scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+    const dataUrl = canvas.toDataURL('image/png');
+    images.push(dataUrl.split(',')[1]); // base64 only
+  }
+  return images;
+}
+
+async function callClaudeDirect(file) {
+  // Dev mode: call Claude API directly from browser (no PHP needed)
+  const apiKey = localStorage.getItem('ifs_api_key') || prompt('Enter your Anthropic API key for local testing.\nThis is stored in localStorage and never sent anywhere except api.anthropic.com.');
+  if (!apiKey) throw new Error('API key required for local testing.');
+  localStorage.setItem('ifs_api_key', apiKey);
+
+  const isPdf = file.type === 'application/pdf';
+  const contentBlocks = [];
+
+  if (isPdf) {
+    // Convert PDF pages to images for models without native PDF support
+    document.getElementById('scan-status').textContent = 'Converting PDF pages\u2026';
+    const pages = await pdfToImages(file);
+    pages.forEach(b64 => {
+      contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: 'image/png', data: b64 } });
+    });
+  } else {
+    const base64 = await fileToBase64(file);
+    contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } });
+  }
+
+  contentBlocks.push({ type: 'text', text: SCAN_PROMPT });
+
+  document.getElementById('scan-status').textContent = 'Extracting line items\u2026';
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: contentBlocks }]
+    })
+  });
+
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(() => '');
+    console.error('Claude API error:', resp.status, errBody);
+    let msg = 'Claude API error (' + resp.status + ')';
+    try { const j = JSON.parse(errBody); msg = (j.error && j.error.message) || msg; } catch(e) {}
+    throw new Error(msg);
+  }
+
+  const result = await resp.json();
+  let text = (result.content && result.content[0] && result.content[0].text) || '';
+  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const items = JSON.parse(text);
+  if (!Array.isArray(items)) throw new Error('Unexpected AI response.');
+  return items;
+}
+
+async function callClaudeViaProxy(file) {
+  // Production: use PHP proxy
+  const formData = new FormData();
+  formData.append('image', file);
+  const resp = await fetch(SCAN_API_URL, { method: 'POST', body: formData });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || 'Server error (' + resp.status + ')');
+  }
+  const data = await resp.json();
+  return data.items || [];
+}
+
 async function handleScanUpload(file) {
   if (!file) return;
 
@@ -2005,43 +2119,32 @@ async function handleScanUpload(file) {
   showScanState('scan-processing');
   const preview = document.getElementById('scan-preview-img');
   const previewWrap = document.getElementById('scan-preview-wrap');
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    preview.src = e.target.result;
-    previewWrap.style.display = '';
-  };
-  reader.readAsDataURL(file);
+  if (file.type && file.type.indexOf('pdf') === -1) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      previewWrap.style.display = '';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    previewWrap.style.display = 'none';
+  }
 
   document.getElementById('scan-status').textContent = 'Reading your document with AI\u2026';
 
   try {
-    const formData = new FormData();
-    formData.append('image', file);
-
     document.getElementById('scan-status').textContent = 'Extracting line items\u2026';
 
-    const resp = await fetch(SCAN_API_URL, {
-      method: 'POST',
-      body: formData
-    });
+    const items = _isProd ? await callClaudeViaProxy(file) : await callClaudeDirect(file);
 
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error || 'Server error (' + resp.status + ')');
-    }
-
-    const data = await resp.json();
-
-    if (!data.items || data.items.length === 0) {
-      throw new Error('No line items found in the document. Try a clearer photo.');
+    if (!items || items.length === 0) {
+      throw new Error('No line items found in the document. Try a clearer image.');
     }
 
     document.getElementById('scan-status').textContent = 'Matching against catalog\u2026';
-
-    // Small delay so the user sees the status update
     await new Promise(r => setTimeout(r, 300));
 
-    scanResults = matchExtractedItems(data.items);
+    scanResults = matchExtractedItems(items);
     renderScanResults();
     showScanState('scan-results');
 
@@ -2052,10 +2155,13 @@ async function handleScanUpload(file) {
 }
 
 function initScanScreen() {
-  if (!isMobile()) return;
-
   const scanScreen = document.getElementById('scan-screen');
-  // Show scan screen on mobile (it starts visible via CSS on mobile)
+
+  // On mobile: show scan screen automatically on load
+  // On desktop: start hidden, opened via toolbar button
+  if (!isMobile()) {
+    scanScreen.classList.add('hidden');
+  }
 
   // File inputs
   document.getElementById('scan-capture').addEventListener('change', function() {
@@ -2065,7 +2171,7 @@ function initScanScreen() {
     if (this.files && this.files[0]) handleScanUpload(this.files[0]);
   });
 
-  // Skip buttons
+  // Skip / dismiss buttons
   document.getElementById('scan-skip').addEventListener('click', dismissScanScreen);
   document.getElementById('scan-results-skip').addEventListener('click', dismissScanScreen);
   document.getElementById('scan-error-skip').addEventListener('click', dismissScanScreen);
@@ -2073,7 +2179,6 @@ function initScanScreen() {
   // Retry
   document.getElementById('scan-retry').addEventListener('click', function() {
     showScanState('scan-upload');
-    // Reset file inputs so the same file can be re-selected
     document.getElementById('scan-capture').value = '';
     document.getElementById('scan-gallery').value = '';
   });
@@ -2088,6 +2193,21 @@ function initScanScreen() {
 
   // Confirm
   document.getElementById('scan-confirm').addEventListener('click', confirmScanResults);
+
+  // Desktop toolbar button — opens file picker directly, no overlay
+  var desktopFileInput = document.getElementById('scan-desktop-file');
+  document.getElementById('scan-toolbar-btn').addEventListener('click', function() {
+    desktopFileInput.value = '';
+    desktopFileInput.click();
+  });
+  desktopFileInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+      // Show scan screen already in processing state (skip upload UI)
+      showScanState('scan-processing');
+      document.getElementById('scan-screen').classList.remove('hidden');
+      handleScanUpload(this.files[0]);
+    }
+  });
 }
 
 loadData();

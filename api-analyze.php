@@ -14,27 +14,33 @@ if (file_exists($localConf)) require_once $localConf;
 // ─── Configuration ───────────────────────────────────────────
 $allowedHost = 'industrialfinishes.com';
 $apiKey      = getenv('ANTHROPIC_API_KEY');
-$model       = 'claude-sonnet-4-6-20250514';
+$model       = 'claude-3-5-sonnet-20241022';
 $maxTokens   = 4096;
 $maxFileSize = 10 * 1024 * 1024; // 10 MB
+
+// Detect production vs local development
+$serverHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+$isProd     = stripos($serverHost, $allowedHost) !== false;
 
 // ─── CORS / Headers ─────────────────────────────────────────
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
-// ─── Origin / Referer Check ─────────────────────────────────
-$origin  = isset($_SERVER['HTTP_ORIGIN'])  ? $_SERVER['HTTP_ORIGIN']  : '';
-$referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+// ─── Origin / Referer Check (production only) ───────────────
+if ($isProd) {
+    $origin  = isset($_SERVER['HTTP_ORIGIN'])  ? $_SERVER['HTTP_ORIGIN']  : '';
+    $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
 
-$originAllowed  = !empty($origin)  && stripos($origin, $allowedHost) !== false;
-$refererAllowed = !empty($referer) && stripos($referer, $allowedHost) !== false;
-$sameOrigin     = empty($origin) && !empty($referer) && stripos($referer, $allowedHost) !== false;
+    $originAllowed  = !empty($origin)  && stripos($origin, $allowedHost) !== false;
+    $refererAllowed = !empty($referer) && stripos($referer, $allowedHost) !== false;
+    $sameOrigin     = empty($origin) && !empty($referer) && stripos($referer, $allowedHost) !== false;
 
-if (!$originAllowed && !$refererAllowed && !$sameOrigin) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Access denied.']);
-    exit;
+    if (!$originAllowed && !$refererAllowed && !$sameOrigin) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Access denied.']);
+        exit;
+    }
 }
 
 // ─── Validate Request ───────────────────────────────────────
@@ -64,12 +70,13 @@ if ($file['size'] > $maxFileSize) {
     exit;
 }
 
-// ─── Read & Encode Image ────────────────────────────────────
+// ─── Read & Encode File ─────────────────────────────────────
 $allowedTypes = [
-    'image/jpeg' => 'image/jpeg',
-    'image/png'  => 'image/png',
-    'image/gif'  => 'image/gif',
-    'image/webp' => 'image/webp',
+    'image/jpeg'      => 'image',
+    'image/png'       => 'image',
+    'image/gif'       => 'image',
+    'image/webp'      => 'image',
+    'application/pdf' => 'document',
 ];
 
 $finfo    = finfo_open(FILEINFO_MIME_TYPE);
@@ -78,12 +85,13 @@ finfo_close($finfo);
 
 if (!isset($allowedTypes[$mimeType])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Unsupported image type. Use JPEG, PNG, GIF, or WebP.']);
+    echo json_encode(['error' => 'Unsupported file type. Use JPEG, PNG, GIF, WebP, or PDF.']);
     exit;
 }
 
-$imageData   = file_get_contents($file['tmp_name']);
-$base64Image = base64_encode($imageData);
+$fileKind    = $allowedTypes[$mimeType]; // 'image' or 'document'
+$fileData    = file_get_contents($file['tmp_name']);
+$base64Data  = base64_encode($fileData);
 
 // ─── Build Claude API Request ───────────────────────────────
 $prompt = 'You are analyzing a supplier pricing document (invoice, quote, or price list) for industrial paint and coatings products. Extract every line item you can find.
@@ -100,6 +108,27 @@ Return ONLY a JSON array with no markdown formatting, no code fences, no other t
 
 If you cannot find any line items, return an empty array: []';
 
+// Build the file content block — 'image' or 'document' type
+if ($fileKind === 'document') {
+    $fileBlock = [
+        'type'   => 'document',
+        'source' => [
+            'type'         => 'base64',
+            'media_type'   => $mimeType,
+            'data'         => $base64Data,
+        ],
+    ];
+} else {
+    $fileBlock = [
+        'type'   => 'image',
+        'source' => [
+            'type'         => 'base64',
+            'media_type'   => $mimeType,
+            'data'         => $base64Data,
+        ],
+    ];
+}
+
 $payload = [
     'model'      => $model,
     'max_tokens' => $maxTokens,
@@ -107,14 +136,7 @@ $payload = [
         [
             'role'    => 'user',
             'content' => [
-                [
-                    'type'   => 'image',
-                    'source' => [
-                        'type'         => 'base64',
-                        'media_type'   => $mimeType,
-                        'data'         => $base64Image,
-                    ],
-                ],
+                $fileBlock,
                 [
                     'type' => 'text',
                     'text' => $prompt,
