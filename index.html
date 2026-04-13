@@ -331,6 +331,57 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .table-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
 .table-wrap::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.15)}
 
+/* ===== MOBILE SCAN SCREEN ===== */
+.scan-screen{display:none}
+@media(max-width:768px){
+  .scan-screen{position:fixed;inset:0;z-index:200;background:var(--bg-deep);display:flex;align-items:center;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .scan-screen::before{content:'';position:absolute;inset:0;background:
+    radial-gradient(ellipse 60% 50% at 30% 20%,rgba(194,213,1,.06),transparent),
+    radial-gradient(ellipse 50% 40% at 70% 80%,rgba(59,130,246,.06),transparent);pointer-events:none}
+  .scan-screen.hidden{display:none}
+}
+.scan-inner{position:relative;z-index:1;width:100%;max-width:420px;padding:32px 24px;text-align:center;margin:0 auto}
+.scan-logo{color:var(--lime);margin-bottom:20px;filter:drop-shadow(0 0 20px rgba(194,213,1,.3))}
+.scan-title{font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:8px;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px}
+.scan-title svg{color:var(--lime)}
+.scan-desc{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:28px;max-width:320px;margin-left:auto;margin-right:auto}
+.scan-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px 24px;border-radius:var(--radius-lg);font-size:15px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:all .25s ease;border:none;text-align:center;letter-spacing:.3px}
+.scan-btn-primary{background:var(--lime);color:var(--bg-deep);box-shadow:0 4px 20px rgba(194,213,1,.25),0 0 40px rgba(194,213,1,.1);margin-bottom:12px}
+.scan-btn-primary:hover{box-shadow:0 8px 30px rgba(194,213,1,.35);transform:translateY(-1px)}
+.scan-btn-primary:active{transform:translateY(2px);box-shadow:0 2px 10px rgba(194,213,1,.2)}
+.scan-btn-secondary{background:rgba(255,255,255,.06);color:var(--text-primary);border:1px solid rgba(255,255,255,.12);margin-bottom:12px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.scan-btn-secondary:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.scan-btn-secondary:active{transform:translateY(2px)}
+.scan-skip{background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;padding:12px;transition:color .2s;font-family:'Inter',sans-serif;text-decoration:underline;text-underline-offset:3px}
+.scan-skip:hover{color:var(--text-secondary)}
+
+.scan-spinner{width:56px;height:56px;border:3px solid rgba(194,213,1,.12);border-top-color:var(--lime);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 24px;box-shadow:0 0 30px rgba(194,213,1,.15)}
+.scan-preview-wrap{margin-top:20px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid rgba(255,255,255,.1);max-height:200px}
+.scan-preview-img{width:100%;height:auto;display:block;opacity:.6;max-height:200px;object-fit:cover}
+
+.scan-results-list{text-align:left;margin-bottom:24px;max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scan-results-list::-webkit-scrollbar{width:4px}
+.scan-results-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+.scan-result-card{background:rgba(255,255,255,.05);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;transition:all .2s ease;animation:fadeUp .3s ease both}
+.scan-result-card.matched{border-left:3px solid var(--success)}
+.scan-result-card.unmatched{border-left:3px solid var(--warning)}
+.scan-result-card .card-row{display:flex;justify-content:space-between;align-items:center}
+.scan-result-card .card-name{font-size:13px;font-weight:700;color:var(--text-primary);line-height:1.3;flex:1;padding-right:8px}
+.scan-result-card .card-check{width:22px;height:22px;border-radius:6px;border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
+.scan-result-card .card-check.checked{background:var(--lime);border-color:var(--lime)}
+.scan-result-card .card-check.checked::after{content:'\2713';color:var(--bg-deep);font-size:13px;font-weight:800}
+.scan-result-card .card-meta{font-size:11px;color:var(--text-muted);margin-top:4px}
+.scan-result-card .card-prices{display:flex;gap:16px;margin-top:8px;font-size:12px}
+.scan-result-card .card-price-item{display:flex;flex-direction:column;gap:1px}
+.scan-result-card .card-price-label{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);font-weight:600}
+.scan-result-card .card-price-val{font-weight:700;color:var(--text-primary);font-family:'Inter',sans-serif}
+.scan-result-card .card-match-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:6px;margin-top:6px}
+.card-match-badge.badge-matched{background:rgba(52,211,153,.1);color:var(--success);border:1px solid rgba(52,211,153,.2)}
+.card-match-badge.badge-unmatched{background:rgba(255,140,0,.08);color:var(--warning);border:1px solid rgba(255,140,0,.15)}
+.scan-results-actions{display:flex;flex-direction:column;gap:0}
+
+.scan-error-icon{font-size:48px;margin-bottom:16px;opacity:.7;color:var(--warning)}
+
 /* ═══════════════════════════════════════════════════════════
    RESPONSIVE
    ═══════════════════════════════════════════════════════════ */
@@ -440,6 +491,29 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 [data-theme="light"] .table-wrap::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.18)}
 [data-theme="light"] mark{background:rgba(194,213,1,.3)}
 [data-theme="light"] .search-clear:hover{background:rgba(0,0,0,.05)}
+
+/* Scan screen light overrides */
+[data-theme="light"] .scan-screen{background:var(--bg-deep)}
+[data-theme="light"] .scan-screen::before{background:
+  radial-gradient(ellipse 60% 50% at 30% 20%,rgba(24,86,65,.04),transparent),
+  radial-gradient(ellipse 50% 40% at 70% 80%,rgba(59,130,246,.04),transparent)}
+[data-theme="light"] .scan-logo{color:var(--green-brand);filter:none}
+[data-theme="light"] .scan-title{color:var(--text-primary)}
+[data-theme="light"] .scan-title svg{color:var(--green-brand)}
+[data-theme="light"] .scan-btn-primary{background:var(--green-brand);color:#fff;box-shadow:0 4px 20px rgba(24,86,65,.2)}
+[data-theme="light"] .scan-btn-primary:hover{box-shadow:0 8px 30px rgba(24,86,65,.3)}
+[data-theme="light"] .scan-btn-secondary{background:rgba(255,255,255,.6);color:var(--text-primary);border-color:rgba(0,0,0,.1)}
+[data-theme="light"] .scan-btn-secondary:hover{background:rgba(255,255,255,.8);border-color:rgba(0,0,0,.15)}
+[data-theme="light"] .scan-skip{color:var(--text-muted)}
+[data-theme="light"] .scan-skip:hover{color:var(--text-secondary)}
+[data-theme="light"] .scan-spinner{border-color:rgba(24,86,65,.12);border-top-color:var(--green-brand);box-shadow:0 0 30px rgba(24,86,65,.1)}
+[data-theme="light"] .scan-preview-wrap{border-color:rgba(0,0,0,.1)}
+[data-theme="light"] .scan-result-card{background:rgba(255,255,255,.6);border-color:rgba(0,0,0,.08)}
+[data-theme="light"] .scan-result-card .card-check{border-color:rgba(0,0,0,.15)}
+[data-theme="light"] .scan-result-card .card-check.checked{background:var(--green-brand);border-color:var(--green-brand)}
+[data-theme="light"] .scan-result-card .card-check.checked::after{color:#fff}
+[data-theme="light"] .card-match-badge.badge-matched{background:rgba(5,150,105,.08);color:var(--success);border-color:rgba(5,150,105,.15)}
+[data-theme="light"] .card-match-badge.badge-unmatched{background:rgba(234,88,12,.06);color:var(--warning);border-color:rgba(234,88,12,.1)}
 
 /* Theme toggle */
 .theme-toggle{position:fixed;top:16px;right:16px;z-index:50;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);color:var(--text-secondary)}
@@ -562,6 +636,65 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
       <div class="page-info" id="page-info"></div>
     </div>
   </section>
+</div>
+
+<!-- ═══════════════ MOBILE SCAN SCREEN ═══════════════ -->
+<div class="scan-screen" id="scan-screen">
+  <div class="scan-inner" id="scan-inner">
+    <!-- STATE 1: Upload -->
+    <div class="scan-upload" id="scan-upload">
+      <div class="scan-logo">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+      <h2 class="scan-title">Scan Your Invoice</h2>
+      <p class="scan-desc">Take a photo or upload a supplier invoice, quote, or price list. AI will extract the pricing details automatically.</p>
+      <label class="scan-btn scan-btn-primary" id="scan-capture-label">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Take Photo
+        <input type="file" accept="image/*" capture="environment" id="scan-capture" hidden>
+      </label>
+      <label class="scan-btn scan-btn-secondary" id="scan-gallery-label">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        Upload from Gallery
+        <input type="file" accept="image/*" id="scan-gallery" hidden>
+      </label>
+      <button class="scan-skip" id="scan-skip">Browse products manually</button>
+    </div>
+
+    <!-- STATE 2: Processing -->
+    <div class="scan-processing" id="scan-processing" style="display:none">
+      <div class="scan-spinner"></div>
+      <h2 class="scan-title">Analyzing Document</h2>
+      <p class="scan-desc" id="scan-status">Reading your document with AI&hellip;</p>
+      <div class="scan-preview-wrap" id="scan-preview-wrap" style="display:none">
+        <img id="scan-preview-img" class="scan-preview-img" alt="Uploaded document">
+      </div>
+    </div>
+
+    <!-- STATE 3: Results -->
+    <div class="scan-results" id="scan-results" style="display:none">
+      <h2 class="scan-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Items Found
+      </h2>
+      <p class="scan-desc" id="scan-results-summary"></p>
+      <div class="scan-results-list" id="scan-results-list"></div>
+      <div class="scan-results-actions">
+        <button class="scan-btn scan-btn-primary" id="scan-confirm">Confirm &amp; Compare</button>
+        <button class="scan-btn scan-btn-secondary" id="scan-rescan">Scan Another</button>
+        <button class="scan-skip" id="scan-results-skip">Browse manually instead</button>
+      </div>
+    </div>
+
+    <!-- STATE 4: Error -->
+    <div class="scan-error" id="scan-error" style="display:none">
+      <div class="scan-error-icon">&#9888;</div>
+      <h2 class="scan-title">Couldn't Read Document</h2>
+      <p class="scan-desc" id="scan-error-msg">Something went wrong. Please try again with a clearer image.</p>
+      <button class="scan-btn scan-btn-primary" id="scan-retry">Try Again</button>
+      <button class="scan-skip" id="scan-error-skip">Browse products manually</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════ SAVINGS PANEL ═══════════════ -->
@@ -983,6 +1116,7 @@ function init() {
   bindEvents();
   setupTilt();
   Particles.init('hero-particles', 35);
+  initScanScreen();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1687,6 +1821,274 @@ function bindEvents() {
     localStorage.setItem('ifs_theme', next);
   });
 })();
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE SCAN SCREEN LOGIC
+   ═══════════════════════════════════════════════════════════ */
+const SCAN_API_URL = _isProd ? 'api-analyze.php' : 'api-analyze.php';
+let scanResults = []; // holds matched/unmatched items after AI analysis
+
+function isMobile() {
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function normalizePartNum(p) {
+  return (p || '').toString().replace(/[\s\-\.\/]/g, '').replace(/^0+/, '').toUpperCase();
+}
+
+function showScanState(state) {
+  const states = ['scan-upload', 'scan-processing', 'scan-results', 'scan-error'];
+  states.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === state ? '' : 'none';
+  });
+}
+
+function dismissScanScreen() {
+  document.getElementById('scan-screen').classList.add('hidden');
+}
+
+function showScanScreen() {
+  document.getElementById('scan-screen').classList.remove('hidden');
+  showScanState('scan-upload');
+}
+
+function matchExtractedItems(items) {
+  const results = [];
+  const partIndex = {};
+  // Build a normalized part number index for fast lookup
+  ALL.forEach((r, i) => {
+    const norm = normalizePartNum(r.part);
+    if (norm) {
+      if (!partIndex[norm]) partIndex[norm] = [];
+      partIndex[norm].push(i);
+    }
+  });
+
+  items.forEach(ext => {
+    const normPart = normalizePartNum(ext.partNumber);
+    let catalogMatch = null;
+
+    // Try exact part number match
+    if (normPart && partIndex[normPart]) {
+      catalogMatch = ALL[partIndex[normPart][0]];
+    }
+
+    // Try partial match (extracted part contained in catalog part or vice versa)
+    if (!catalogMatch && normPart && normPart.length >= 4) {
+      for (const key in partIndex) {
+        if (key.indexOf(normPart) !== -1 || normPart.indexOf(key) !== -1) {
+          catalogMatch = ALL[partIndex[key][0]];
+          break;
+        }
+      }
+    }
+
+    // Try description-based fuzzy match as last resort
+    if (!catalogMatch && ext.description) {
+      const descWords = ext.description.toUpperCase().split(/\s+/).filter(w => w.length > 3);
+      if (descWords.length >= 2) {
+        let bestScore = 0, bestIdx = -1;
+        for (let i = 0; i < ALL.length && i < 5000; i++) {
+          const d = (ALL[i].desc || '').toUpperCase();
+          let score = 0;
+          descWords.forEach(w => { if (d.indexOf(w) !== -1) score++; });
+          if (score > bestScore && score >= 2) { bestScore = score; bestIdx = i; }
+        }
+        if (bestIdx >= 0) catalogMatch = ALL[bestIdx];
+      }
+    }
+
+    results.push({
+      extracted: ext,
+      catalog: catalogMatch,
+      matched: !!catalogMatch,
+      checked: !!catalogMatch // default checked if matched
+    });
+  });
+
+  return results;
+}
+
+function renderScanResults() {
+  const list = document.getElementById('scan-results-list');
+  const matchedCount = scanResults.filter(r => r.matched).length;
+  const totalCount = scanResults.length;
+
+  document.getElementById('scan-results-summary').textContent =
+    matchedCount + ' of ' + totalCount + ' items matched to our catalog' +
+    (totalCount - matchedCount > 0 ? '. Unmatched items shown below.' : '.');
+
+  let html = '';
+  scanResults.forEach((r, i) => {
+    const name = r.matched ? esc(r.catalog.desc) : esc(r.extracted.description || 'Unknown Product');
+    const part = r.matched ? esc(r.catalog.part) : esc(r.extracted.partNumber || '—');
+    const msrp = r.matched ? fmt(r.catalog.price) : '—';
+    const youPay = r.extracted.unitPrice > 0 ? fmt(r.extracted.unitPrice) : '—';
+    const disc = r.extracted.discountPercent > 0 ? r.extracted.discountPercent + '%' : '—';
+    const qty = r.extracted.quantity || 1;
+
+    html += '<div class="scan-result-card ' + (r.matched ? 'matched' : 'unmatched') + '" data-scan-idx="' + i + '"' +
+      ' style="animation-delay:' + (i * 0.05) + 's">' +
+      '<div class="card-row">' +
+        '<div class="card-name">' + name + '</div>' +
+        '<div class="card-check ' + (r.checked ? 'checked' : '') + '" data-scan-check="' + i + '"></div>' +
+      '</div>' +
+      '<div class="card-meta">' + part + (r.matched ? ' &middot; ' + esc(r.catalog.size) : '') + ' &middot; Qty: ' + qty + '</div>' +
+      '<div class="card-prices">' +
+        '<div class="card-price-item"><span class="card-price-label">MSRP</span><span class="card-price-val">' + msrp + '</span></div>' +
+        '<div class="card-price-item"><span class="card-price-label">You Pay</span><span class="card-price-val">' + youPay + '</span></div>' +
+        '<div class="card-price-item"><span class="card-price-label">Discount</span><span class="card-price-val">' + disc + '</span></div>' +
+      '</div>' +
+      '<span class="card-match-badge ' + (r.matched ? 'badge-matched' : 'badge-unmatched') + '">' +
+        (r.matched ? '\u2713 Catalog Match' : '\u26A0 No Match') +
+      '</span>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+
+  // Toggle checkmarks
+  list.addEventListener('click', function(e) {
+    const check = e.target.closest('[data-scan-check]');
+    if (!check) return;
+    const idx = parseInt(check.dataset.scanCheck);
+    if (idx >= 0 && idx < scanResults.length) {
+      scanResults[idx].checked = !scanResults[idx].checked;
+      check.classList.toggle('checked');
+    }
+  });
+}
+
+function confirmScanResults() {
+  const toAdd = scanResults.filter(r => r.checked && r.matched);
+  if (toAdd.length === 0) {
+    dismissScanScreen();
+    return;
+  }
+
+  toAdd.forEach(r => {
+    const cat = r.catalog;
+    const ext = r.extracted;
+    // Check if already selected
+    const existing = findSelected(cat);
+    if (existing >= 0) {
+      // Update existing entry with scanned values
+      selected[existing].qty = ext.quantity || 1;
+      if (ext.unitPrice > 0) selected[existing].youPay = ext.unitPrice;
+      if (ext.discountPercent > 0) selected[existing].disc = ext.discountPercent;
+    } else {
+      selected.unshift({
+        desc: cat.desc,
+        part: cat.part,
+        size: cat.size,
+        price: cat.price,
+        vendor: cat.vendor,
+        category: cat.category,
+        catName: cat.catName,
+        qty: ext.quantity || 1,
+        youPay: ext.unitPrice || 0,
+        disc: ext.discountPercent || 0
+      });
+    }
+  });
+
+  saveSelection();
+  render();
+  dismissScanScreen();
+  openPanel();
+}
+
+async function handleScanUpload(file) {
+  if (!file) return;
+
+  // Show processing state with preview
+  showScanState('scan-processing');
+  const preview = document.getElementById('scan-preview-img');
+  const previewWrap = document.getElementById('scan-preview-wrap');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    preview.src = e.target.result;
+    previewWrap.style.display = '';
+  };
+  reader.readAsDataURL(file);
+
+  document.getElementById('scan-status').textContent = 'Reading your document with AI\u2026';
+
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    document.getElementById('scan-status').textContent = 'Extracting line items\u2026';
+
+    const resp = await fetch(SCAN_API_URL, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || 'Server error (' + resp.status + ')');
+    }
+
+    const data = await resp.json();
+
+    if (!data.items || data.items.length === 0) {
+      throw new Error('No line items found in the document. Try a clearer photo.');
+    }
+
+    document.getElementById('scan-status').textContent = 'Matching against catalog\u2026';
+
+    // Small delay so the user sees the status update
+    await new Promise(r => setTimeout(r, 300));
+
+    scanResults = matchExtractedItems(data.items);
+    renderScanResults();
+    showScanState('scan-results');
+
+  } catch (err) {
+    document.getElementById('scan-error-msg').textContent = err.message || 'Something went wrong. Please try again with a clearer image.';
+    showScanState('scan-error');
+  }
+}
+
+function initScanScreen() {
+  if (!isMobile()) return;
+
+  const scanScreen = document.getElementById('scan-screen');
+  // Show scan screen on mobile (it starts visible via CSS on mobile)
+
+  // File inputs
+  document.getElementById('scan-capture').addEventListener('change', function() {
+    if (this.files && this.files[0]) handleScanUpload(this.files[0]);
+  });
+  document.getElementById('scan-gallery').addEventListener('change', function() {
+    if (this.files && this.files[0]) handleScanUpload(this.files[0]);
+  });
+
+  // Skip buttons
+  document.getElementById('scan-skip').addEventListener('click', dismissScanScreen);
+  document.getElementById('scan-results-skip').addEventListener('click', dismissScanScreen);
+  document.getElementById('scan-error-skip').addEventListener('click', dismissScanScreen);
+
+  // Retry
+  document.getElementById('scan-retry').addEventListener('click', function() {
+    showScanState('scan-upload');
+    // Reset file inputs so the same file can be re-selected
+    document.getElementById('scan-capture').value = '';
+    document.getElementById('scan-gallery').value = '';
+  });
+
+  // Rescan
+  document.getElementById('scan-rescan').addEventListener('click', function() {
+    scanResults = [];
+    showScanState('scan-upload');
+    document.getElementById('scan-capture').value = '';
+    document.getElementById('scan-gallery').value = '';
+  });
+
+  // Confirm
+  document.getElementById('scan-confirm').addEventListener('click', confirmScanResults);
+}
 
 loadData();
 </script>
