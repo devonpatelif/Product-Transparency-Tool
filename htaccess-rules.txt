@@ -12,3 +12,9 @@
     Order Allow,Deny
     Deny from all
 </Files>
+
+# Block direct public access to the captured email leads.
+<Files "leads.csv">
+    Order Allow,Deny
+    Deny from all
+</Files>
