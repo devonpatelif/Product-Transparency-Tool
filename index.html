@@ -2342,8 +2342,12 @@ function bindEvents() {
 const SCAN_API_URL = 'api-analyze.php';
 let scanResults = []; // holds matched/unmatched items after AI analysis
 
-function isMobile() {
-  return window.matchMedia('(max-width: 768px)').matches;
+/* Phones + tablets land on the scan screen first; desktops go straight to
+   the catalog. 1024px catches iPad landscape (the widest mainstream tablet
+   form factor) — anything wider gets enough screen real estate that the
+   catalog view is the better entry point. */
+function isHandheld() {
+  return window.matchMedia('(max-width: 1024px)').matches;
 }
 
 function showScanState(state) {
@@ -3033,9 +3037,10 @@ async function handleScanUpload(file) {
 function initScanScreen() {
   const scanScreen = document.getElementById('scan-screen');
 
-  // Start hidden; mobile auto-opens only after email is provided
+  // Start hidden; phones + tablets auto-open the scan screen (after email
+  // capture if needed). Desktops go straight to the catalog.
   scanScreen.classList.add('hidden');
-  if (isMobile()) {
+  if (isHandheld()) {
     if (hasEmail()) {
       scanScreen.classList.remove('hidden');
     } else {
