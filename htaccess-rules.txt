@@ -1,6 +1,6 @@
 # ──────────────────────────────────────────────────────────────
 # ADD THESE RULES to the .htaccess file in the same folder as
-# index3.html, api-data.php, and IVData.json.
+# index.html, api-data.php, and IVData.json.
 #
 # If there is no .htaccess in that folder, create one with just
 # these lines. If one already exists, add these lines at the TOP.
@@ -18,3 +18,10 @@
     Order Allow,Deny
     Deny from all
 </Files>
+
+# Block direct access to the normalized-catalog cache and the
+# rate-limit state files. api-data.php auto-creates these dirs
+# with their own deny .htaccess as defense-in-depth, but we deny
+# at the parent level too in case those drop files are missing.
+RedirectMatch 403 ^/?\.cache(/|$)
+RedirectMatch 403 ^/?\.ratelimit(/|$)

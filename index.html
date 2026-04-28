@@ -362,9 +362,316 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .scan-preview-wrap{margin-top:20px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid rgba(255,255,255,.1);max-height:200px}
 .scan-preview-img{width:100%;height:auto;display:block;opacity:.6;max-height:200px;object-fit:cover}
 
-.scan-results-list{text-align:left;margin-bottom:24px;max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.scan-results-list::-webkit-scrollbar{width:4px}
-.scan-results-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+/* Results state widens the scan-inner container so the summary + cards
+   can use the full screen on desktop. The page itself scrolls — we drop
+   the inner max-height so every card is visible at once.
+
+   Also override the parent .scan-screen's vertical centering: when the
+   content is taller than the viewport, align-items:center clips both
+   ends. Top-align so the user can scroll naturally from the title down. */
+/* Padding-top lives on .scan-inner, NOT .scan-screen, so the sticky pricing
+   bar pins to the actual top of the scroll viewport. If padding sits on the
+   scroll container, sticky `top:0` pins to the inside-padding edge — leaving
+   a leak zone above the bar where scrolled cards bleed through. */
+.scan-screen.is-results{align-items:flex-start}
+.scan-screen.is-results .scan-inner{max-width:1080px;padding:48px 24px 80px}
+.scan-screen.is-results .scan-title{font-size:28px}
+.scan-screen.is-results .scan-desc{max-width:none;font-size:14px}
+
+.scan-results-list{text-align:left;margin-bottom:24px}
+/* Two-column card grid on desktop, single column on mobile */
+@media (min-width:780px){
+  .scan-results-list{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .scan-results-list > .scan-notfound{grid-column:1/-1}
+}
+
+/* ── Pricing Analysis sticky header — the conversion moment.
+     Stays pinned to the top of the scan-screen scroll container so users see
+     the verdict (and the CTA) at every scroll position. Two-row layout:
+       Row 1: status pill + bold one-line title (with glowing accent number) + CTA
+       Row 2: divided stat strip with the Hidden Markup tile visually emphasized */
+.scan-totals{position:sticky;top:0;z-index:30;margin:0 0 24px;padding:18px 22px;
+  border-radius:18px;
+  /* Fully opaque base — cards must NOT be visible through the sticky bar.
+     Radial highlight stays semi-transparent because it sits on top of the
+     opaque base, not on top of the page. */
+  background:radial-gradient(ellipse 70% 100% at 100% 50%,rgba(194,213,1,.07),transparent 70%),
+    linear-gradient(135deg,rgb(20,28,18),rgb(8,14,18));
+  border:1px solid rgba(194,213,1,.3);
+  box-shadow:0 18px 42px rgba(0,0,0,.42),0 0 0 1px rgba(194,213,1,.06),inset 0 1px 0 rgba(255,255,255,.06);
+  display:flex;flex-direction:column;gap:14px;overflow:hidden;
+  animation:scanBannerRise .55s cubic-bezier(.2,.7,.2,1) both}
+@keyframes scanBannerRise{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+
+/* Slow horizontal sheen — adds polish without stealing attention */
+.scan-totals::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.04) 50%,transparent 70%);
+  animation:paShine 7s ease-in-out infinite;pointer-events:none}
+@keyframes paShine{0%,100%{transform:translateX(-100%)}50%{transform:translateX(100%)}}
+.scan-totals > *{position:relative;z-index:1}
+
+/* Alarm state — markup detected → red wash + slow border pulse to draw the eye */
+.scan-totals.alarm{border-color:rgba(255,91,91,.42);
+  background:radial-gradient(ellipse 70% 100% at 100% 50%,rgba(255,77,77,.09),transparent 70%),
+    linear-gradient(135deg,rgb(28,15,15),rgb(14,8,8));
+  box-shadow:0 18px 42px rgba(0,0,0,.5),0 0 0 1px rgba(255,91,91,.14),inset 0 1px 0 rgba(255,255,255,.04);
+  animation:scanBannerRise .55s cubic-bezier(.2,.7,.2,1) both,paAlarmPulse 2.6s ease-in-out infinite .8s}
+@keyframes paAlarmPulse{
+  0%,100%{box-shadow:0 18px 42px rgba(0,0,0,.5),0 0 0 1px rgba(255,91,91,.14),inset 0 1px 0 rgba(255,255,255,.04)}
+  50%{box-shadow:0 18px 42px rgba(0,0,0,.5),0 0 0 1px rgba(255,91,91,.36),0 0 36px rgba(255,91,91,.16),inset 0 1px 0 rgba(255,255,255,.04)}}
+
+/* ── Top row: eyebrow + bold title (left) + CTA (right) ── */
+.pa-bar-top{display:flex;align-items:center;gap:18px}
+.pa-bar-lead{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+
+.pa-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;
+  letter-spacing:2px;text-transform:uppercase;color:var(--lime);
+  padding:6px 14px;border-radius:50px;background:rgba(194,213,1,.1);
+  border:1px solid rgba(194,213,1,.32);box-shadow:0 0 18px rgba(194,213,1,.14);
+  white-space:nowrap;width:fit-content}
+.pa-eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--lime);
+  box-shadow:0 0 10px var(--lime);animation:paDotPulse 2.2s ease-in-out infinite;flex-shrink:0}
+.scan-totals.alarm .pa-eyebrow{color:#ff7a7a;background:rgba(255,91,91,.1);
+  border-color:rgba(255,91,91,.38);box-shadow:0 0 18px rgba(255,91,91,.18)}
+.scan-totals.alarm .pa-eyebrow .dot{background:#ff5b5b;box-shadow:0 0 10px #ff5b5b}
+@keyframes paDotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.8)}}
+
+.pa-bar-title{font-family:'Space Grotesk',sans-serif;font-size:clamp(20px,2.2vw,26px);
+  font-weight:800;letter-spacing:-.5px;color:var(--text-primary);line-height:1.2;
+  text-wrap:balance}
+.pa-headline-accent{display:inline-block;color:var(--lime);font-weight:900;
+  font-size:1.18em;letter-spacing:-.6px;
+  text-shadow:0 0 28px rgba(194,213,1,.5),0 0 64px rgba(194,213,1,.2);
+  font-feature-settings:'tnum'}
+.scan-totals.alarm .pa-headline-accent{color:#ff5b5b;
+  text-shadow:0 0 28px rgba(255,91,91,.55),0 0 64px rgba(255,91,91,.22)}
+
+/* CTA button — always visible inside the sticky bar */
+.pa-bar-cta{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;
+  padding:12px 22px;border-radius:12px;
+  font-family:'Inter',sans-serif;font-size:13px;font-weight:800;
+  letter-spacing:.4px;text-transform:uppercase;text-decoration:none;
+  background:var(--lime);color:var(--bg-deep);border:none;cursor:pointer;
+  box-shadow:0 8px 22px rgba(194,213,1,.3),0 0 30px rgba(194,213,1,.12);
+  transition:transform .22s ease,box-shadow .22s ease;white-space:nowrap}
+.pa-bar-cta:hover{transform:translateY(-2px);
+  box-shadow:0 12px 30px rgba(194,213,1,.45),0 0 50px rgba(194,213,1,.2)}
+.pa-bar-cta:active{transform:translateY(0)}
+.pa-bar-cta svg{width:14px;height:14px}
+.scan-totals.alarm .pa-bar-cta{background:#fff;color:#1a0d0d;
+  box-shadow:0 8px 22px rgba(255,91,91,.32),0 0 30px rgba(255,91,91,.14)}
+.scan-totals.alarm .pa-bar-cta:hover{
+  box-shadow:0 12px 30px rgba(255,91,91,.48),0 0 50px rgba(255,91,91,.22)}
+
+/* ── Bottom row: divided stats strip ── */
+.pa-bar-stats{display:flex;flex-wrap:wrap;border-radius:10px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);overflow:hidden}
+.pa-stat{flex:1 1 110px;padding:10px 16px;display:flex;flex-direction:column;gap:3px;
+  border-right:1px solid rgba(255,255,255,.07);min-width:0;position:relative}
+.pa-stat:last-child{border-right:none}
+.pa-stat-label{font-size:9.5px;font-weight:800;text-transform:uppercase;
+  letter-spacing:1.2px;color:var(--text-muted);white-space:nowrap}
+.pa-stat-val{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:900;
+  letter-spacing:-.4px;color:var(--text-primary);line-height:1;
+  font-feature-settings:'tnum';white-space:nowrap}
+.pa-stat-accent .pa-stat-val{color:var(--lime)}
+.pa-stat-danger .pa-stat-val{color:#ff5b5b;text-shadow:0 0 14px rgba(255,91,91,.3)}
+.pa-stat-pending .pa-stat-val{color:var(--text-muted);font-size:13px;
+  font-style:italic;font-weight:700;letter-spacing:-.1px}
+.pa-stat-clean .pa-stat-val{color:var(--lime);font-size:14px;font-weight:800;letter-spacing:-.2px}
+
+/* The Hidden Markup tile — emphasized as the headline finding */
+.pa-stat-headline{background:linear-gradient(135deg,rgba(194,213,1,.1),rgba(194,213,1,.02))}
+.pa-stat-headline::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--lime);box-shadow:0 0 12px var(--lime)}
+.pa-stat-headline .pa-stat-val{font-size:19px}
+.pa-stat-headline.pa-stat-clean .pa-stat-val{font-size:15px}
+.pa-stat-headline.pa-stat-pending .pa-stat-val{font-size:14px}
+.pa-stat-headline.pa-stat-danger{background:linear-gradient(135deg,rgba(255,91,91,.12),rgba(255,91,91,.02))}
+.pa-stat-headline.pa-stat-danger::before{background:#ff5b5b;box-shadow:0 0 14px #ff5b5b;
+  animation:paHeadlinePulse 2s ease-in-out infinite}
+@keyframes paHeadlinePulse{0%,100%{box-shadow:0 0 14px #ff5b5b}50%{box-shadow:0 0 22px #ff5b5b,0 0 32px rgba(255,91,91,.35)}}
+
+@media (max-width:780px){
+  .scan-totals{padding:14px 16px;border-radius:14px;gap:12px}
+  .pa-bar-top{flex-direction:column;align-items:stretch;gap:12px}
+  .pa-bar-cta{justify-content:center;padding:11px 18px}
+  .pa-bar-title{font-size:18px}
+  .pa-stat{flex:1 1 0;padding:8px 10px}
+  .pa-stat-val{font-size:14px}
+  .pa-stat-headline .pa-stat-val{font-size:15px}
+  .pa-stat-headline.pa-stat-clean .pa-stat-val,.pa-stat-headline.pa-stat-pending .pa-stat-val{font-size:12px}
+}
+
+[data-theme="light"] .scan-totals{
+  background:radial-gradient(ellipse 70% 100% at 100% 50%,rgba(24,86,65,.06),transparent 70%),
+    linear-gradient(135deg,rgb(255,255,255),rgb(248,250,247));
+  border-color:rgba(24,86,65,.22);
+  box-shadow:0 18px 42px rgba(24,86,65,.1),0 0 0 1px rgba(24,86,65,.04),inset 0 1px 0 rgba(255,255,255,.6)}
+[data-theme="light"] .scan-totals.alarm{
+  background:radial-gradient(ellipse 70% 100% at 100% 50%,rgba(220,53,69,.07),transparent 70%),
+    linear-gradient(135deg,rgb(255,250,250),rgb(252,245,245));
+  border-color:rgba(220,53,69,.28)}
+[data-theme="light"] .pa-eyebrow{color:var(--green-brand);background:rgba(24,86,65,.07);
+  border-color:rgba(24,86,65,.26);box-shadow:0 0 16px rgba(24,86,65,.08)}
+[data-theme="light"] .pa-eyebrow .dot{background:var(--green-brand);box-shadow:0 0 10px rgba(24,86,65,.45)}
+[data-theme="light"] .scan-totals.alarm .pa-eyebrow{color:#c0392b;background:rgba(220,53,69,.07);
+  border-color:rgba(220,53,69,.28);box-shadow:0 0 16px rgba(220,53,69,.1)}
+[data-theme="light"] .scan-totals.alarm .pa-eyebrow .dot{background:#c0392b;box-shadow:0 0 10px rgba(220,53,69,.4)}
+[data-theme="light"] .pa-headline-accent{color:var(--green-brand);
+  text-shadow:0 0 24px rgba(24,86,65,.22),0 0 56px rgba(24,86,65,.08)}
+[data-theme="light"] .scan-totals.alarm .pa-headline-accent{color:#c0392b;
+  text-shadow:0 0 24px rgba(220,53,69,.25),0 0 56px rgba(220,53,69,.1)}
+[data-theme="light"] .pa-bar-cta{background:var(--green-brand);color:#fff;
+  box-shadow:0 8px 22px rgba(24,86,65,.22),0 0 30px rgba(24,86,65,.08)}
+[data-theme="light"] .pa-bar-cta:hover{box-shadow:0 12px 30px rgba(24,86,65,.34),0 0 50px rgba(24,86,65,.14)}
+[data-theme="light"] .scan-totals.alarm .pa-bar-cta{background:#c0392b;color:#fff;
+  box-shadow:0 8px 22px rgba(220,53,69,.28),0 0 30px rgba(220,53,69,.12)}
+[data-theme="light"] .scan-totals.alarm .pa-bar-cta:hover{
+  box-shadow:0 12px 30px rgba(220,53,69,.42),0 0 50px rgba(220,53,69,.18)}
+[data-theme="light"] .pa-bar-stats{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.06)}
+[data-theme="light"] .pa-stat{border-right-color:rgba(0,0,0,.06)}
+[data-theme="light"] .pa-stat-accent .pa-stat-val{color:var(--green-brand)}
+[data-theme="light"] .pa-stat-danger .pa-stat-val{color:#c0392b;text-shadow:0 0 12px rgba(220,53,69,.18)}
+[data-theme="light"] .pa-stat-clean .pa-stat-val{color:var(--green-brand)}
+[data-theme="light"] .pa-stat-headline{background:linear-gradient(135deg,rgba(24,86,65,.08),rgba(24,86,65,.01))}
+[data-theme="light"] .pa-stat-headline::before{background:var(--green-brand);box-shadow:0 0 10px rgba(24,86,65,.4)}
+[data-theme="light"] .pa-stat-headline.pa-stat-danger{background:linear-gradient(135deg,rgba(220,53,69,.09),rgba(220,53,69,.01))}
+[data-theme="light"] .pa-stat-headline.pa-stat-danger::before{background:#c0392b;box-shadow:0 0 12px rgba(220,53,69,.4)}
+
+/* ── Polished result card ── */
+.scan-card{position:relative;padding:22px 24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s ease,border-color .22s ease;animation:fadeUp .4s cubic-bezier(.2,.7,.2,1) both;display:flex;flex-direction:column;gap:16px;overflow:hidden}
+.scan-card::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent 30%);pointer-events:none;border-radius:inherit}
+.scan-card:hover{transform:translateY(-3px);box-shadow:0 18px 44px rgba(0,0,0,.32);border-color:rgba(255,255,255,.16)}
+.scan-card.verdict-fair{border-left:3px solid var(--lime)}
+.scan-card.verdict-fair:hover{box-shadow:0 18px 44px rgba(0,0,0,.32),0 0 0 1px rgba(194,213,1,.15),0 0 32px rgba(194,213,1,.08)}
+.scan-card.verdict-mild{border-left:3px solid #ffa500}
+.scan-card.verdict-mild:hover{box-shadow:0 18px 44px rgba(0,0,0,.32),0 0 0 1px rgba(255,165,0,.18),0 0 32px rgba(255,165,0,.08)}
+.scan-card.verdict-ripoff{border-left:3px solid #ff8c00}
+.scan-card.verdict-ripoff:hover{box-shadow:0 18px 44px rgba(0,0,0,.32),0 0 0 1px rgba(255,140,0,.2),0 0 32px rgba(255,140,0,.1)}
+.scan-card.verdict-overpay{border-left:3px solid #ff4d4d}
+.scan-card.verdict-overpay:hover{box-shadow:0 18px 44px rgba(0,0,0,.4),0 0 0 1px rgba(255,77,77,.25),0 0 36px rgba(255,77,77,.12)}
+.scan-card.verdict-pending{border-left:3px solid rgba(255,255,255,.18)}
+
+.scan-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;position:relative;z-index:1}
+.scan-card-name{font-size:17px;font-weight:800;color:var(--text-primary);line-height:1.3;flex:1;letter-spacing:-.2px}
+.scan-card-meta{font-size:12px;color:var(--text-muted);margin-top:6px;letter-spacing:.2px;font-family:'JetBrains Mono','Consolas',monospace}
+.scan-card-vendor{display:inline-block;margin-top:8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text-secondary);padding:3px 9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:5px}
+
+/* Mini bar visualization — at-a-glance ratio of MSRP vs You Pay. The
+   green segment grows to fill what they're paying; the red segment is
+   the supplier's hidden markup. Animated width transitions on update. */
+.scan-card-bar{position:relative;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;display:flex}
+.scan-card-bar-seg{height:100%;transition:width .55s cubic-bezier(.2,.7,.2,1)}
+.scan-card-bar-seg.you{background:linear-gradient(90deg,var(--lime),#a3b800);box-shadow:0 0 12px rgba(194,213,1,.35)}
+.scan-card-bar-seg.gap{background:rgba(255,255,255,.1)}
+.scan-card-bar-seg.markup{background:linear-gradient(90deg,#ff8c00,#ff4d4d);box-shadow:0 0 12px rgba(255,77,77,.3)}
+.scan-card-bar-legend{display:flex;justify-content:space-between;font-size:10px;font-weight:700;letter-spacing:.4px;color:var(--text-muted);margin-top:6px;text-transform:uppercase}
+
+.scan-card-pricegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.scan-input-cell{display:flex;flex-direction:column;gap:5px}
+.scan-input-cell label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:var(--text-muted)}
+.scan-input{width:100%;padding:11px 13px;background:rgba(0,0,0,.3);color:var(--text-primary);border:1px solid rgba(255,255,255,.1);border-radius:10px;font-size:15px;font-weight:800;font-family:'Space Grotesk',sans-serif;letter-spacing:-.2px;outline:none;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease;-moz-appearance:textfield;appearance:textfield}
+.scan-input:focus{border-color:var(--lime);background:rgba(0,0,0,.42);box-shadow:0 0 0 3px rgba(194,213,1,.14)}
+.scan-input::-webkit-outer-spin-button,.scan-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+.scan-card-results{padding:14px 16px;background:rgba(0,0,0,.22);border-radius:12px;border:1px solid rgba(255,255,255,.05);font-size:13px;display:flex;flex-direction:column;gap:10px}
+.scan-card-result-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.scan-card-result-label{color:var(--text-muted);font-size:11px;letter-spacing:.3px;font-weight:600}
+.scan-card-result-val{font-weight:800;color:var(--text-primary);font-family:'Space Grotesk',sans-serif;letter-spacing:-.2px;font-size:14px}
+.scan-card-result-val.lime{color:var(--lime)}
+.scan-card-result-val.danger{color:#ff5b5b;text-shadow:0 0 12px rgba(255,91,91,.2)}
+.scan-card-result-val.warn{color:#ffa500}
+
+/* ── Focal verdict block — the WOW moment on every card ─────────────
+   The hero stat per card. Eyebrow status label, GIANT number with
+   verdict-tinted glow, supporting label, then the explanation text.
+   The whole block is wrapped in a verdict-tinted gradient. */
+.scan-card-focal{position:relative;padding:18px 20px;border-radius:14px;border:1px solid;overflow:hidden;display:flex;flex-direction:column;gap:6px;animation:focalIn .45s cubic-bezier(.2,.7,.2,1) both}
+.scan-card-focal::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 100% at 100% 0%,currentColor,transparent 60%);opacity:.08;pointer-events:none}
+@keyframes focalIn{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+
+.scan-card-focal.fair    {background:linear-gradient(135deg,rgba(194,213,1,.09),rgba(194,213,1,0));border-color:rgba(194,213,1,.22);color:var(--lime)}
+.scan-card-focal.mild    {background:linear-gradient(135deg,rgba(255,165,0,.08),rgba(255,165,0,0));border-color:rgba(255,165,0,.2);color:#ffa500}
+.scan-card-focal.ripoff  {background:linear-gradient(135deg,rgba(255,140,0,.1),rgba(255,140,0,0));border-color:rgba(255,140,0,.24);color:#ff8c00}
+.scan-card-focal.overpay {background:linear-gradient(135deg,rgba(255,77,77,.12),rgba(255,77,77,0));border-color:rgba(255,77,77,.28);color:#ff5b5b;animation:focalIn .45s cubic-bezier(.2,.7,.2,1) both,focalAlarm 2.6s ease-in-out infinite .45s}
+.scan-card-focal.pending {background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.08);color:var(--text-muted)}
+@keyframes focalAlarm{0%,100%{box-shadow:0 0 0 0 rgba(255,77,77,0)}50%{box-shadow:0 0 0 6px rgba(255,77,77,.08),0 0 28px rgba(255,77,77,.12)}}
+
+.scan-card-focal-eyebrow{position:relative;z-index:1;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;display:flex;align-items:center;gap:8px;color:currentColor;opacity:.95}
+.scan-card-focal-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+.scan-card-focal.overpay .scan-card-focal-eyebrow .dot{animation:focalDotPulse 1.4s ease-in-out infinite}
+@keyframes focalDotPulse{0%{box-shadow:0 0 0 0 rgba(255,91,91,.6)}70%{box-shadow:0 0 0 10px rgba(255,91,91,0)}100%{box-shadow:0 0 0 0 rgba(255,91,91,0)}}
+@keyframes focalNumPop{0%{transform:scale(.94);opacity:.6}60%{transform:scale(1.04);opacity:1}100%{transform:scale(1);opacity:1}}
+
+.scan-card-focal-num{position:relative;z-index:1;font-size:clamp(34px,4.5vw,46px);font-weight:900;line-height:1;letter-spacing:-1.5px;font-family:'Space Grotesk',sans-serif;color:currentColor;text-shadow:0 0 24px currentColor;filter:drop-shadow(0 0 12px currentColor) saturate(.9);margin-top:2px}
+.scan-card-focal.pending .scan-card-focal-num{font-size:clamp(20px,3vw,26px);letter-spacing:-.5px;text-shadow:none;filter:none;font-style:italic;font-weight:700}
+
+.scan-card-focal-sublabel{position:relative;z-index:1;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:currentColor;opacity:.85;margin-top:-2px}
+
+.scan-card-focal-desc{position:relative;z-index:1;font-size:13px;line-height:1.5;color:var(--text-secondary);margin-top:6px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.08)}
+
+/* Tiny supporting stats strip below the focal block */
+.scan-card-substats{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--text-muted);padding:0 2px}
+.scan-card-substats > div{display:flex;flex-direction:column;gap:2px;flex:1}
+.scan-card-substats label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted)}
+.scan-card-substats .v{font-size:13px;font-weight:800;color:var(--text-primary);font-family:'Space Grotesk',sans-serif;letter-spacing:-.2px}
+.scan-card-substats .v.lime{color:var(--lime)}
+.scan-card-substats .v.danger{color:#ff5b5b}
+
+[data-theme="light"] .scan-card-focal.fair{color:var(--green-brand);background:linear-gradient(135deg,rgba(24,86,65,.07),rgba(24,86,65,0));border-color:rgba(24,86,65,.22)}
+/* The dark glow on the focal number is designed for a dark background; on
+   light it reads as a muddy smudge. Drop both shadow and filter on light. */
+[data-theme="light"] .scan-card-focal-num{filter:none;text-shadow:none}
+[data-theme="light"] .scan-card-substats .v.lime{color:var(--green-brand)}
+[data-theme="light"] .scan-card-substats .v.danger{color:#c0392b}
+
+/* ── Lead conversion CTA — adaptive copy based on the markup story.
+     The whole reason a customer gets to this page is so we can make
+     the case for a real quote. This block is the single-most important
+     CTA on the entire site for a scan-flow visitor. ── */
+.scan-cta{position:relative;margin:32px 0 22px;padding:28px 30px;background:linear-gradient(135deg,rgba(194,213,1,.1),rgba(59,130,246,.04));border:1px solid rgba(194,213,1,.22);border-radius:20px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.25);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;animation:fadeUp .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:.2s}
+.scan-cta::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 60% at 100% 50%,rgba(194,213,1,.12),transparent 60%);pointer-events:none}
+.scan-cta::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.05) 50%,transparent 65%);animation:scanSheen 7s ease-in-out infinite;animation-delay:1.5s;pointer-events:none}
+@keyframes scanSheen{0%,100%{transform:translateX(-30%)}50%{transform:translateX(30%)}}
+.scan-cta.alarm{border-color:rgba(255,91,91,.32);background:linear-gradient(135deg,rgba(255,77,77,.1),rgba(255,140,0,.04))}
+.scan-cta.alarm::before{background:radial-gradient(ellipse 50% 60% at 100% 50%,rgba(255,91,91,.14),transparent 60%)}
+
+.scan-cta-text{position:relative;z-index:1;flex:1;min-width:280px}
+.scan-cta-title{font-size:22px;font-weight:800;color:var(--text-primary);letter-spacing:-.4px;line-height:1.25;margin-bottom:8px}
+.scan-cta-sub{font-size:14px;color:var(--text-secondary);line-height:1.5}
+
+.scan-cta-actions{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.scan-cta-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:800;font-family:'Inter',sans-serif;cursor:pointer;transition:all .22s ease;border:none;letter-spacing:.2px;text-decoration:none;background:var(--lime);color:var(--bg-deep);box-shadow:0 6px 22px rgba(194,213,1,.25),0 0 36px rgba(194,213,1,.1);min-width:220px}
+.scan-cta-btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(194,213,1,.4),0 0 52px rgba(194,213,1,.18)}
+.scan-cta-btn:active{transform:translateY(1px)}
+.scan-cta.alarm .scan-cta-btn{background:#fff;color:#1a0d0d;box-shadow:0 6px 22px rgba(255,91,91,.25),0 0 36px rgba(255,91,91,.1)}
+.scan-cta.alarm .scan-cta-btn:hover{box-shadow:0 12px 32px rgba(255,91,91,.4),0 0 52px rgba(255,91,91,.2)}
+.scan-cta-secondary{background:transparent;border:1px solid rgba(255,255,255,.18);color:var(--text-secondary);font-size:13px;padding:10px 18px;min-width:auto;font-weight:700;box-shadow:none}
+.scan-cta-secondary:hover{background:rgba(255,255,255,.05);color:var(--text-primary);box-shadow:none;transform:none}
+
+[data-theme="light"] .scan-cta{background:linear-gradient(135deg,rgba(24,86,65,.08),rgba(59,130,246,.03));border-color:rgba(24,86,65,.2)}
+[data-theme="light"] .scan-cta::before{background:radial-gradient(ellipse 50% 60% at 100% 50%,rgba(24,86,65,.1),transparent 60%)}
+[data-theme="light"] .scan-cta-btn{background:var(--green-brand);color:#fff;box-shadow:0 6px 22px rgba(24,86,65,.22),0 0 36px rgba(24,86,65,.1)}
+[data-theme="light"] .scan-cta-btn:hover{box-shadow:0 12px 32px rgba(24,86,65,.34),0 0 52px rgba(24,86,65,.18)}
+[data-theme="light"] .scan-cta-secondary{border-color:rgba(0,0,0,.15);color:var(--text-secondary)}
+[data-theme="light"] .scan-cta-secondary:hover{background:rgba(0,0,0,.04);color:var(--text-primary)}
+
+/* ── Action row at the bottom ── */
+.scan-actions-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;justify-content:center}
+.scan-actions-row .scan-btn{flex:1 1 200px;max-width:280px;margin-bottom:0}
+
+/* Light theme overrides — the lime accent (#c2d501) has terrible contrast
+   on a near-white background, so we swap "fair / positive" text to the
+   dark forest-green brand color (#185641) anywhere it shows up. */
+[data-theme="light"] .scan-card{background:rgba(255,255,255,.7);border-color:rgba(0,0,0,.06)}
+[data-theme="light"] .scan-card:hover{border-color:rgba(0,0,0,.12);box-shadow:0 12px 32px rgba(0,0,0,.08)}
+[data-theme="light"] .scan-card.verdict-fair{border-left-color:var(--green-brand)}
+[data-theme="light"] .scan-card-result-val.lime{color:var(--green-brand)}
+[data-theme="light"] .scan-card-verdict.fair{background:rgba(24,86,65,.06);color:var(--green-brand);border-color:rgba(24,86,65,.18)}
+[data-theme="light"] .scan-input{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.12)}
+[data-theme="light"] .scan-input:focus{border-color:var(--green-brand);background:rgba(0,0,0,.02);box-shadow:0 0 0 2px rgba(24,86,65,.12)}
+[data-theme="light"] .scan-card-results{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.05)}
 .scan-result-card{background:rgba(255,255,255,.05);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;transition:all .2s ease;animation:fadeUp .3s ease both}
 .scan-result-card.matched{border-left:3px solid var(--success)}
 .scan-result-card.unmatched{border-left:3px solid var(--warning)}
@@ -381,6 +688,16 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .scan-result-card .card-match-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:6px;margin-top:6px}
 .card-match-badge.badge-matched{background:rgba(52,211,153,.1);color:var(--success);border:1px solid rgba(52,211,153,.2)}
 .card-match-badge.badge-unmatched{background:rgba(255,140,0,.08);color:var(--warning);border:1px solid rgba(255,140,0,.15)}
+.scan-result-card.ambiguous{border-left-color:var(--warning)}
+.card-options{margin-top:10px;padding:8px 10px;background:rgba(255,140,0,.06);border:1px solid rgba(255,140,0,.2);border-radius:8px}
+.card-options-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--warning);margin-bottom:6px}
+.card-options-select{width:100%;padding:8px 10px;background:rgba(0,0,0,.35);color:var(--text-primary);border:1px solid rgba(255,255,255,.15);border-radius:6px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;outline:none}
+.card-options-select:focus{border-color:rgba(255,140,0,.5);box-shadow:0 0 0 2px rgba(255,140,0,.15)}
+[data-theme="light"] .card-options-select{background:#fff;color:var(--text-primary);border-color:rgba(0,0,0,.15)}
+.scan-notfound{margin-top:14px;padding:12px 14px;background:rgba(255,140,0,.06);border:1px dashed rgba(255,140,0,.25);border-radius:var(--radius);font-size:12px;color:var(--text-secondary);line-height:1.5}
+.scan-notfound-title{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--warning);margin-bottom:6px}
+.scan-notfound-list{font-family:'JetBrains Mono','Consolas',monospace;font-size:11px;color:var(--text-muted);word-break:break-all}
+[data-theme="light"] .scan-notfound{background:rgba(255,140,0,.05);border-color:rgba(255,140,0,.3)}
 .scan-results-actions{display:flex;flex-direction:column;gap:0}
 
 .scan-error-icon{font-size:48px;margin-bottom:16px;opacity:.7;color:var(--warning)}
@@ -738,19 +1055,23 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
       </div>
     </div>
 
-    <!-- STATE 3: Results -->
+    <!-- STATE 3: Results — the final destination after a scan. Shows a
+         totals banner, all matched items as live calc cards, and a
+         "Not Found" notice for unmatched part numbers. -->
     <div class="scan-results" id="scan-results" style="display:none">
       <h2 class="scan-title">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        Items Found
+        Your Pricing Analysis
       </h2>
       <p class="scan-desc" id="scan-results-summary"></p>
+      <div class="scan-totals" id="scan-totals" style="display:none"></div>
       <div class="scan-results-list" id="scan-results-list"></div>
-      <div class="scan-results-actions">
-        <button class="scan-btn scan-btn-primary" id="scan-confirm">Confirm &amp; Compare</button>
+      <div class="scan-cta" id="scan-cta" style="display:none"></div>
+      <div class="scan-actions-row">
+        <button class="scan-btn scan-btn-primary" id="scan-export">Export Report (CSV)</button>
         <button class="scan-btn scan-btn-secondary" id="scan-rescan">Scan Another</button>
-        <button class="scan-skip" id="scan-results-skip">Browse manually instead</button>
       </div>
+      <button class="scan-skip" id="scan-results-skip" style="display:block;margin:10px auto 0">Browse catalog manually</button>
     </div>
 
     <!-- STATE 4: Error -->
@@ -854,13 +1175,16 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 <!-- ═══════════════ TOOLTIP ═══════════════ -->
 <div class="tooltip" id="tooltip"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════
    CONFIGURATION
    ═══════════════════════════════════════════════════════════ */
-const _isProd = location.hostname.indexOf('industrialfinishes.com') !== -1;
-const DATA_URL = _isProd ? 'api-data.php' : 'IVData.json';
+const DATA_URL = 'api-data.php';
+
+// One-time cleanup: older dev builds prompted users for an API key and
+// stored it in localStorage. That code path is gone — wipe any stale key
+// so it can't sit around in old browsers.
+try { localStorage.removeItem('ifs_api_key'); } catch (e) {}
 
 /* ═══════════════════════════════════════════════════════════
    EMAIL GATE — captures email before unlocking item #2,
@@ -966,14 +1290,18 @@ const CATEGORY_ICONS = {
 };
 
 /* ═══════════════════════════════════════════════════════════
-   STATE
+   STATE — bulk catalog stays on the server. `filtered` holds only
+   the rows currently rendered (one page worth). `META` is the small
+   set of vendor / category / total counts used by the dropdowns and
+   the hero stat cards.
    ═══════════════════════════════════════════════════════════ */
-let ALL = [], filtered = [], selected = [];
+let META = null, filtered = [], totalMatched = 0, selected = [];
 let page = 1, pageSize = 25;
 let sortCol = -1, sortAsc = true;
 let searchQuery = '';
 let ttTimer = null, ttRow = null;
 let panelOpen = false;
+let _searchSeq = 0;
 
 /* ═══════════════════════════════════════════════════════════
    UTILITIES
@@ -1127,106 +1455,22 @@ function updateGauge(pct) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   NORMALIZE — auto-detect JSON key names (PRESERVED)
-   ═══════════════════════════════════════════════════════════ */
-let KEY_MAP = null;
-
-function detectKeys(sample) {
-  const keys = Object.keys(sample);
-  console.log('JSON keys found:', keys);
-  const lk = {};
-  keys.forEach(k => { lk[k.toLowerCase().replace(/[\s_\-\/]/g, '')] = k; });
-  function find(...candidates) {
-    for (const c of candidates) { if (sample[c] !== undefined) return c; }
-    for (const c of candidates) {
-      const norm = c.toLowerCase().replace(/[\s_\-\/]/g, '');
-      if (lk[norm]) return lk[norm];
-    }
-    return null;
-  }
-  KEY_MAP = {
-    desc: find('part_nbr/description','part_nbr_description','description','Description','ProductDescription'),
-    part: find('part_nbr','PartNumber','Part Number','partNbr'),
-    size: find('size','Size'),
-    price: find('std_price','StdPrice','Price','stdprice','StandardPrice'),
-    vendor: find('vendor_name','VendorName','Vendor','vendorname'),
-    category: find('category','Category'),
-    catName: find('Category Name','CategoryName','category_name'),
-    plDesc: find('Product_line_desc','pl_desc','ProductLine','Product Line','productlinedesc'),
-    splDesc: find('spl_desc','SubProductLine','SubProductline','splDesc','spldesc'),
-    decGal: find('decimal_gallons','DecimalGallons','decimalgallons'),
-    grit: find('grit','Grit'),
-    vpn: find('vendor_part_nbr','VendorPartNumber','vendorpartnbr')
-  };
-  console.log('Key mapping:', KEY_MAP);
-  return KEY_MAP;
-}
-
-function normalize(raw) {
-  const km = KEY_MAP;
-  const cat = (km.category ? raw[km.category] : '') || '';
-  return {
-    desc: (km.desc ? raw[km.desc] : '') || '',
-    part: (km.part ? raw[km.part] : '') || '',
-    size: (km.size ? raw[km.size] : '') || '',
-    price: parseFloat(km.price ? raw[km.price] : 0) || 0,
-    vendor: (km.vendor ? raw[km.vendor] : '') || '',
-    category: cat,
-    catName: (km.catName ? raw[km.catName] : '') || CATEGORY_MAP[cat] || cat || '',
-    plDesc: (km.plDesc ? raw[km.plDesc] : '') || '',
-    splDesc: (km.splDesc ? raw[km.splDesc] : '') || '',
-    decGal: parseFloat(km.decGal ? raw[km.decGal] : 0) || 0,
-    grit: parseInt(km.grit ? raw[km.grit] : 0) || 0,
-    vpn: (km.vpn ? raw[km.vpn] : '') || ''
-  };
-}
-
-/* ═══════════════════════════════════════════════════════════
-   DATA LOADING (PRESERVED)
+   DATA LOADING — fetch only the small metadata payload upfront
+   (vendor list, category map, totals). Product rows are fetched
+   on demand by applyFilters() as the user searches/filters.
+   The full catalog never reaches the browser.
    ═══════════════════════════════════════════════════════════ */
 async function loadData() {
   const fill = document.getElementById('loader-fill');
   fill.style.width = '30%';
   try {
-    const resp = await fetch(DATA_URL);
-    fill.style.width = '60%';
-    if (!resp.ok) throw new Error('Failed to load data: ' + resp.status);
-    const raw = await resp.json();
-    fill.style.width = '85%';
-
-    let arr;
-    if (raw.firstTableRows && Array.isArray(raw.firstTableRows) && raw.firstTableRows.length > 0) {
-      arr = raw.firstTableRows;
-    } else if (raw.results && raw.results[0] && raw.results[0].tables && raw.results[0].tables[0] && raw.results[0].tables[0].rows) {
-      arr = raw.results[0].tables[0].rows;
-    } else if (raw.tables && raw.tables[0] && raw.tables[0].rows) {
-      arr = raw.tables[0].rows;
+    const resp = await fetch(DATA_URL + '?meta=1');
+    fill.style.width = '70%';
+    if (!resp.ok) throw new Error('Failed to load metadata: ' + resp.status);
+    META = await resp.json();
+    if (!META || typeof META.total !== 'number') {
+      throw new Error('Unexpected metadata response');
     }
-    if (!arr) {
-      if (Array.isArray(raw)) arr = raw;
-      else arr = raw.data || raw.value || raw.rows || [];
-    }
-
-    // Strip "TableName[...]" prefix from keys if present (Power BI DAX format)
-    if (arr.length > 0) {
-      const firstKey = Object.keys(arr[0])[0] || '';
-      if (firstKey.indexOf('[') > -1) {
-        arr = arr.map(row => {
-          const clean = {};
-          for (const k in row) {
-            const match = k.match(/\[(.+)\]$/);
-            clean[match ? match[1] : k] = row[k];
-          }
-          return clean;
-        });
-      }
-    }
-
-    if (arr.length > 0) detectKeys(arr[0]);
-    else throw new Error('JSON loaded but contains no records');
-
-    ALL = arr.map(normalize).filter(r => r.price > 0);
-    filtered = ALL.slice();
     fill.style.width = '100%';
     setTimeout(init, 350);
   } catch (err) {
@@ -1237,17 +1481,58 @@ async function loadData() {
   }
 }
 
+/* Fetch one page of products from the server. Each call increments a
+   sequence number; out-of-order responses (e.g. when the user types
+   quickly) are discarded so the table only renders the latest result. */
+async function fetchProducts() {
+  const seq = ++_searchSeq;
+  const params = new URLSearchParams();
+  if (searchQuery)   params.set('q', searchQuery);
+  if (selectedCat)   params.set('category', selectedCat);
+  if (selectedVen)   params.set('vendor', selectedVen);
+  if (sortCol >= 0) {
+    const sortKeys = ['desc','part','size','vendor','price'];
+    params.set('sort', sortKeys[sortCol]);
+    params.set('dir', sortAsc ? 'asc' : 'desc');
+  }
+  params.set('limit', String(pageSize));
+  params.set('offset', String((page - 1) * pageSize));
+
+  try {
+    const resp = await fetch(DATA_URL + '?' + params.toString());
+    if (seq !== _searchSeq) return; // stale response — newer one in flight
+    if (resp.status === 429) {
+      const eb = document.getElementById('error-banner');
+      eb.style.display = 'block';
+      eb.textContent = 'You’re searching very quickly — please slow down for a moment.';
+      setTimeout(() => { eb.style.display = 'none'; }, 3000);
+      return;
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (seq !== _searchSeq) return;
+    filtered = Array.isArray(data.items) ? data.items : [];
+    totalMatched = typeof data.total === 'number' ? data.total : filtered.length;
+    render();
+  } catch (err) {
+    if (seq !== _searchSeq) return;
+    console.error('Search failed:', err);
+    filtered = [];
+    totalMatched = 0;
+    render();
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════
    INIT
    ═══════════════════════════════════════════════════════════ */
 function init() {
   document.getElementById('loading-screen').classList.add('hidden');
 
-  const brands = new Set(ALL.map(r => r.vendor)).size;
-  const cats = new Set(ALL.map(r => r.category).filter(Boolean)).size;
-  animateCount(document.getElementById('stat-products'), ALL.length, 1200);
-  animateCount(document.getElementById('stat-brands'), brands, 1400);
-  animateCount(document.getElementById('stat-categories'), cats, 1000);
+  const catCount = META.categories ? Object.keys(META.categories).length : 0;
+  animateCount(document.getElementById('stat-products'), META.total || 0, 1200);
+  animateCount(document.getElementById('stat-brands'), META.brands || 0, 1400);
+  animateCount(document.getElementById('stat-categories'), catCount, 1000);
 
   buildCategoryFilter();
   buildVendorFilter();
@@ -1272,18 +1557,17 @@ function init() {
 let selectedCat = '', selectedVen = '';
 
 function buildCategoryFilter() {
-  const cats = {};
-  ALL.forEach(r => { if (r.category) cats[r.category] = r.catName || r.category; });
+  const cats = (META && META.categories) || {};
   const menu = document.getElementById('menu-category');
   let html = '<div class="custom-dropdown-item selected" data-value="">All Categories</div>';
   Object.keys(cats).sort((a, b) => (cats[a] || a).localeCompare(cats[b] || b)).forEach(k => {
-    html += '<div class="custom-dropdown-item" data-value="' + k + '">' + esc(cats[k]) + '</div>';
+    html += '<div class="custom-dropdown-item" data-value="' + esc(k) + '">' + esc(cats[k]) + '</div>';
   });
   menu.innerHTML = html;
 }
 
 function buildVendorFilter() {
-  const vendors = [...new Set(ALL.map(r => r.vendor).filter(Boolean))].sort();
+  const vendors = (META && Array.isArray(META.vendors)) ? META.vendors : [];
   const menu = document.getElementById('menu-vendor');
   let html = '<div class="custom-dropdown-item selected" data-value="">All Vendors</div>';
   vendors.forEach(v => {
@@ -1323,32 +1607,13 @@ document.addEventListener('click', () => {
 });
 
 /* ═══════════════════════════════════════════════════════════
-   FILTERING & SORTING
+   FILTERING & SORTING — server-side. applyFilters() resets the
+   page and triggers a fetch; the table re-renders when the
+   response arrives. Sorting just refetches with sort/dir params.
    ═══════════════════════════════════════════════════════════ */
 function applyFilters() {
-  const q = searchQuery.toLowerCase();
-  const cat = selectedCat;
-  const ven = selectedVen;
-  filtered = ALL.filter(r => {
-    if (cat && r.category !== cat) return false;
-    if (ven && r.vendor !== ven) return false;
-    if (q && (r.desc + ' ' + r.part + ' ' + r.size + ' ' + r.vendor + ' ' + r.plDesc + ' ' + r.splDesc + ' ' + r.vpn)
-        .toLowerCase().indexOf(q) === -1) return false;
-    return true;
-  });
-  if (sortCol >= 0) doSort();
   page = 1;
-  render();
-}
-
-function doSort() {
-  const keys = ['desc','part','size','vendor','price'];
-  const k = keys[sortCol];
-  filtered.sort((a, b) => {
-    let x = a[k], y = b[k];
-    if (typeof x === 'string') { x = x.toLowerCase(); y = y.toLowerCase(); }
-    return sortAsc ? (x < y ? -1 : x > y ? 1 : 0) : (x > y ? -1 : x < y ? 1 : 0);
-  });
+  fetchProducts();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1356,9 +1621,7 @@ function doSort() {
    ═══════════════════════════════════════════════════════════ */
 function render() {
   hideTooltip();
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize;
-  const slice = filtered.slice(start, end);
+  // `filtered` is already the current page (server paginates).
   const tbody = document.getElementById('table-body');
   const empty = document.getElementById('empty-state');
   tbody.innerHTML = '';
@@ -1373,11 +1636,11 @@ function render() {
   document.getElementById('pagination').style.display = '';
 
   const q = searchQuery;
-  slice.forEach((r, i) => {
+  filtered.forEach((r, i) => {
     const tr = document.createElement('tr');
     tr.className = 'row-enter';
     tr.style.animationDelay = (i * 18) + 'ms';
-    tr.dataset.idx = start + i;
+    tr.dataset.idx = i;
     const isSel = findSelected(r) >= 0;
     if (isSel) tr.classList.add('selected-row');
     tr.innerHTML =
@@ -1396,18 +1659,23 @@ function render() {
 }
 
 function updateResultCount() {
-  document.getElementById('result-count').innerHTML = '<span>' + fmtN(filtered.length) + '</span> product' + (filtered.length !== 1 ? 's' : '');
+  document.getElementById('result-count').innerHTML = '<span>' + fmtN(totalMatched) + '</span> product' + (totalMatched !== 1 ? 's' : '');
 }
 
 function renderPagination() {
-  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const totalPages = Math.ceil(totalMatched / pageSize) || 1;
   const nav = document.getElementById('page-nav');
   nav.innerHTML = '';
+  const goToPage = (pg) => {
+    page = pg;
+    document.getElementById('table-wrap').scrollTop = 0;
+    fetchProducts();
+  };
   const addBtn = (text, pg, disabled) => {
     const b = document.createElement('button');
     b.innerHTML = text; b.disabled = disabled;
     if (pg === page) b.classList.add('active');
-    b.addEventListener('click', () => { page = pg; render(); document.getElementById('table-wrap').scrollTop = 0; });
+    b.addEventListener('click', () => goToPage(pg));
     nav.appendChild(b);
   };
   addBtn('&#9664;', Math.max(1, page - 1), page <= 1);
@@ -1416,9 +1684,9 @@ function renderPagination() {
   for (let i = lo; i <= hi; i++) addBtn(String(i), i, false);
   if (hi < totalPages) { if (hi < totalPages - 1) nav.appendChild(Object.assign(document.createElement('span'), { textContent: '\u2026', style: 'padding:0 4px;color:rgba(255,255,255,.2);font-size:11px' })); addBtn(String(totalPages), totalPages, false); }
   addBtn('&#9654;', Math.min(totalPages, page + 1), page >= totalPages);
-  const s = (page - 1) * pageSize, e = Math.min(filtered.length, page * pageSize);
-  document.getElementById('page-info').innerHTML = filtered.length === 0 ? 'No matches' :
-    'Showing <b>' + fmtN(s + 1) + '\u2013' + fmtN(e) + '</b> of <b>' + fmtN(filtered.length) + '</b>';
+  const s = (page - 1) * pageSize, e = Math.min(totalMatched, page * pageSize);
+  document.getElementById('page-info').innerHTML = totalMatched === 0 ? 'No matches' :
+    'Showing <b>' + fmtN(s + 1) + '\u2013' + fmtN(e) + '</b> of <b>' + fmtN(totalMatched) + '</b>';
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1762,20 +2030,19 @@ function bindEvents() {
   setupDropdown('trigger-category', 'menu-category', val => { selectedCat = val; applyFilters(); });
   setupDropdown('trigger-vendor', 'menu-vendor', val => { selectedVen = val; applyFilters(); });
 
-  // Sorting
+  // Sorting — server-side
   document.querySelectorAll('th[data-col]').forEach((th, i) => {
     th.addEventListener('click', () => {
       if (sortCol === i) sortAsc = !sortAsc;
       else { sortCol = i; sortAsc = true; }
       document.querySelectorAll('th[data-col]').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
       th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
-      doSort();
       page = 1;
-      render();
+      fetchProducts();
     });
   });
 
-  // Page sizes
+  // Page sizes — server-side
   document.getElementById('page-sizes').addEventListener('click', e => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -1783,7 +2050,7 @@ function bindEvents() {
     document.querySelectorAll('#page-sizes button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     page = 1;
-    render();
+    fetchProducts();
   });
 
   // Table body — add/remove + tooltip
@@ -1904,16 +2171,13 @@ function bindEvents() {
     e.stopPropagation();
     const val = parseInt(document.getElementById('sp-global-disc').value) || 0;
     if (val === 0) return;
-    // Build category list from selected items
-    // Build category list — also look up category from ALL data if missing on selected item
+    // Build category list from selected items. Items added via the table or
+    // the scanner already carry their category — anything else falls into "Other".
     const cats = {};
     selected.forEach(item => {
-      let cat = item.category, catName = item.catName;
-      if (!cat) {
-        const match = ALL.find(r => r.part === item.part && r.size === item.size && r.desc === item.desc);
-        if (match) { cat = match.category; catName = match.catName; item.category = cat; item.catName = catName; }
-      }
-      if (cat) cats[cat] = catName || cat;
+      const cat = item.category || 'OTHER';
+      const catName = item.catName || (META && META.categories && META.categories[cat]) || cat;
+      cats[cat] = catName;
     });
     let catHtml = '';
     const catKeys = Object.keys(cats).sort((a, b) => (cats[a]).localeCompare(cats[b]));
@@ -1981,15 +2245,10 @@ function bindEvents() {
    MOBILE SCAN SCREEN LOGIC
    ═══════════════════════════════════════════════════════════ */
 const SCAN_API_URL = 'api-analyze.php';
-const SCAN_PROMPT = 'You are analyzing a supplier pricing document (invoice, quote, or price list) for industrial paint and coatings products. Extract every line item you can find.\n\nFor each item, extract:\n- partNumber: The part/item/SKU number (look for columns labeled Part #, Item #, SKU, Product Code, etc.)\n- description: Product name/description\n- quantity: Number of units (default 1 if not shown)\n- unitPrice: Price per unit the customer pays (numeric, no $ sign)\n- discountPercent: Discount percentage if shown (numeric, no % sign; 0 if not listed)\n\nReturn ONLY a JSON array with no markdown formatting, no code fences, no other text:\n[{"partNumber":"...","description":"...","quantity":1,"unitPrice":0.00,"discountPercent":0}]\n\nIf you cannot find any line items, return an empty array: []';
 let scanResults = []; // holds matched/unmatched items after AI analysis
 
 function isMobile() {
   return window.matchMedia('(max-width: 768px)').matches;
-}
-
-function normalizePartNum(p) {
-  return (p || '').toString().replace(/[\s\-\.\/]/g, '').replace(/^0+/, '').toUpperCase();
 }
 
 function showScanState(state) {
@@ -1998,10 +2257,17 @@ function showScanState(state) {
     const el = document.getElementById(id);
     if (el) el.style.display = id === state ? '' : 'none';
   });
+  // Widen the inner container only on the results state so the cards grid
+  // and totals banner have room. Other states stay at the narrow 420px width.
+  document.getElementById('scan-screen').classList.toggle('is-results', state === 'scan-results');
 }
 
 function dismissScanScreen() {
   document.getElementById('scan-screen').classList.add('hidden');
+  // If the user picked items during the scan and chose to navigate back to
+  // the catalog, refresh the catalog so the selected rows show as selected
+  // and the floating panel badge reflects the new count.
+  if (typeof render === 'function' && Array.isArray(filtered)) render();
 }
 
 function showScanScreen() {
@@ -2009,241 +2275,539 @@ function showScanScreen() {
   showScanState('scan-upload');
 }
 
-function matchExtractedItems(items) {
-  const results = [];
-  const partIndex = {};
-  // Build a normalized part number index for fast lookup
-  ALL.forEach((r, i) => {
-    const norm = normalizePartNum(r.part);
-    if (norm) {
-      if (!partIndex[norm]) partIndex[norm] = [];
-      partIndex[norm].push(i);
-    }
-  });
-
-  items.forEach(ext => {
-    const normPart = normalizePartNum(ext.partNumber);
-    let catalogMatch = null;
-
-    // Try exact part number match
-    if (normPart && partIndex[normPart]) {
-      catalogMatch = ALL[partIndex[normPart][0]];
-    }
-
-    // Try partial match (extracted part contained in catalog part or vice versa)
-    if (!catalogMatch && normPart && normPart.length >= 4) {
-      for (const key in partIndex) {
-        if (key.indexOf(normPart) !== -1 || normPart.indexOf(key) !== -1) {
-          catalogMatch = ALL[partIndex[key][0]];
-          break;
-        }
-      }
-    }
-
-    // Try description-based fuzzy match as last resort
-    if (!catalogMatch && ext.description) {
-      const descWords = ext.description.toUpperCase().split(/\s+/).filter(w => w.length > 3);
-      if (descWords.length >= 2) {
-        let bestScore = 0, bestIdx = -1;
-        for (let i = 0; i < ALL.length && i < 5000; i++) {
-          const d = (ALL[i].desc || '').toUpperCase();
-          let score = 0;
-          descWords.forEach(w => { if (d.indexOf(w) !== -1) score++; });
-          if (score > bestScore && score >= 2) { bestScore = score; bestIdx = i; }
-        }
-        if (bestIdx >= 0) catalogMatch = ALL[bestIdx];
-      }
-    }
-
-    results.push({
-      extracted: ext,
-      catalog: catalogMatch,
-      matched: !!catalogMatch,
-      checked: !!catalogMatch // default checked if matched
+async function matchExtractedItems(items) {
+  // Matching runs on the server so the catalog never has to ship to the
+  // browser. Same three-tier logic (exact part #, partial part #,
+  // description fuzzy) lives in api-data.php.
+  try {
+    const resp = await fetch(DATA_URL + '?op=match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items })
     });
-  });
-
-  return results;
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (!data || !Array.isArray(data.results)) throw new Error('Bad response');
+    return data.results;
+  } catch (err) {
+    console.error('Catalog match failed:', err);
+    // Fall back to "no match found" for every item so the UI still renders
+    return items.map(ext => ({ extracted: ext, catalog: null, matched: false, checked: false }));
+  }
 }
 
 function renderScanResults() {
   const list = document.getElementById('scan-results-list');
-  const matchedCount = scanResults.filter(r => r.matched).length;
+  const matched   = scanResults.filter(r => r.matched);
+  const unmatched = scanResults.filter(r => !r.matched);
   const totalCount = scanResults.length;
 
-  document.getElementById('scan-results-summary').textContent =
-    matchedCount + ' of ' + totalCount + ' items matched to our catalog' +
-    (totalCount - matchedCount > 0 ? '. Unmatched items shown below.' : '.');
+  let summary;
+  if (matched.length === 0) {
+    summary = 'None of the ' + totalCount + ' scanned item' + (totalCount !== 1 ? 's' : '') + ' matched our catalog.';
+  } else if (unmatched.length === 0) {
+    summary = 'All ' + totalCount + ' item' + (totalCount !== 1 ? 's' : '') + ' matched our catalog.';
+  } else {
+    summary = matched.length + ' of ' + totalCount + ' items matched our catalog. ' +
+              unmatched.length + ' part number' + (unmatched.length !== 1 ? 's' : '') + ' not found.';
+  }
+  document.getElementById('scan-results-summary').textContent = summary;
 
-  let html = '';
-  scanResults.forEach((r, i) => {
-    const name = r.matched ? esc(r.catalog.desc) : esc(r.extracted.description || 'Unknown Product');
-    const part = r.matched ? esc(r.catalog.part) : esc(r.extracted.partNumber || '—');
-    const msrp = r.matched ? fmt(r.catalog.price) : '—';
-    const youPay = r.extracted.unitPrice > 0 ? fmt(r.extracted.unitPrice) : '—';
-    const disc = r.extracted.discountPercent > 0 ? r.extracted.discountPercent + '%' : '—';
-    const qty = r.extracted.quantity || 1;
-
-    html += '<div class="scan-result-card ' + (r.matched ? 'matched' : 'unmatched') + '" data-scan-idx="' + i + '"' +
-      ' style="animation-delay:' + (i * 0.05) + 's">' +
-      '<div class="card-row">' +
-        '<div class="card-name">' + name + '</div>' +
-        '<div class="card-check ' + (r.checked ? 'checked' : '') + '" data-scan-check="' + i + '"></div>' +
-      '</div>' +
-      '<div class="card-meta">' + part + (r.matched ? ' &middot; ' + esc(r.catalog.size) : '') + ' &middot; Qty: ' + qty + '</div>' +
-      '<div class="card-prices">' +
-        '<div class="card-price-item"><span class="card-price-label">MSRP</span><span class="card-price-val">' + msrp + '</span></div>' +
-        '<div class="card-price-item"><span class="card-price-label">You Pay</span><span class="card-price-val">' + youPay + '</span></div>' +
-        '<div class="card-price-item"><span class="card-price-label">Discount</span><span class="card-price-val">' + disc + '</span></div>' +
-      '</div>' +
-      '<span class="card-match-badge ' + (r.matched ? 'badge-matched' : 'badge-unmatched') + '">' +
-        (r.matched ? '\u2713 Catalog Match' : '\u26A0 No Match') +
-      '</span>' +
-    '</div>';
-  });
-  list.innerHTML = html;
-
-  // Toggle checkmarks
-  list.addEventListener('click', function(e) {
-    const check = e.target.closest('[data-scan-check]');
-    if (!check) return;
-    const idx = parseInt(check.dataset.scanCheck);
-    if (idx >= 0 && idx < scanResults.length) {
-      scanResults[idx].checked = !scanResults[idx].checked;
-      check.classList.toggle('checked');
+  // Cache editable values on each matched scan result so subsequent
+  // re-renders (e.g. after a dropdown change) don't lose user edits.
+  matched.forEach(r => {
+    if (!r.calc) {
+      r.calc = {
+        qty:    Math.max(1, parseInt(r.extracted.quantity) || 1),
+        youPay: r.extracted.unitPrice > 0 ? Math.round(r.extracted.unitPrice * 100) / 100 : 0,
+        disc:   Math.min(99, Math.max(0, parseInt(r.extracted.discountPercent) || 0)),
+      };
     }
   });
+  syncScanResultsToSelected();
+
+  let html = '';
+  matched.forEach((r, i) => {
+    const name = esc(r.catalog.desc);
+    const part = esc(r.catalog.part);
+    const origIdx = scanResults.indexOf(r);
+
+    // When the same part number maps to multiple catalog entries (e.g. two
+    // products that share a SKU), surface a dropdown so the user picks the
+    // right one instead of us silently grabbing the first.
+    let optionsHtml = '';
+    if (r.ambiguous && Array.isArray(r.matchOptions) && r.matchOptions.length > 1) {
+      const selectedKey = (r.catalog.part || '') + '||' + (r.catalog.desc || '');
+      let optsInner = '';
+      r.matchOptions.forEach((opt, oi) => {
+        const optKey = (opt.part || '') + '||' + (opt.desc || '');
+        const sel = optKey === selectedKey ? ' selected' : '';
+        const descText = opt.desc.length > 70 ? opt.desc.substring(0, 70) + '\u2026' : opt.desc;
+        const vendorText = opt.vendor ? ' \u00b7 ' + opt.vendor : '';
+        const sizeText = opt.size ? ' \u00b7 ' + opt.size : '';
+        const priceText = ' \u2014 ' + fmt(opt.price);
+        optsInner += '<option value="' + oi + '"' + sel + '>' +
+          esc(descText + sizeText + vendorText + priceText) + '</option>';
+      });
+      optionsHtml =
+        '<div class="card-options">' +
+          '<span class="card-options-label">' + r.matchOptions.length + ' catalog matches \u2014 pick the right one</span>' +
+          '<select class="card-options-select" data-scan-options="' + origIdx + '">' + optsInner + '</select>' +
+        '</div>';
+    }
+
+    html += '<div class="scan-card verdict-pending" data-scan-idx="' + origIdx + '"' +
+      ' style="animation-delay:' + (i * 0.05) + 's">' +
+      '<div class="scan-card-header"><div>' +
+        '<div class="scan-card-name">' + name + '</div>' +
+        '<div class="scan-card-meta">' + part + ' &middot; ' + esc(r.catalog.size || '') + '</div>' +
+        (r.catalog.vendor ? '<span class="scan-card-vendor">' + esc(r.catalog.vendor) + '</span>' : '') +
+      '</div></div>' +
+      optionsHtml +
+      '<div data-scan-bar="' + origIdx + '"></div>' +
+      '<div class="scan-card-pricegrid">' +
+        '<div class="scan-input-cell"><label>Qty</label>' +
+          '<input type="number" class="scan-input" data-scan-input="qty" data-idx="' + origIdx + '" min="1" max="9999" value="' + r.calc.qty + '"></div>' +
+        '<div class="scan-input-cell"><label>You Pay</label>' +
+          '<input type="number" class="scan-input" data-scan-input="youPay" data-idx="' + origIdx + '" min="0" step="0.01" placeholder="0.00" value="' + (r.calc.youPay > 0 ? r.calc.youPay : '') + '"></div>' +
+        '<div class="scan-input-cell"><label>Stated Disc %</label>' +
+          '<input type="number" class="scan-input" data-scan-input="disc" data-idx="' + origIdx + '" min="0" max="99" placeholder="0" value="' + (r.calc.disc > 0 ? r.calc.disc : '') + '"></div>' +
+      '</div>' +
+      '<div class="scan-card-focal pending" data-scan-focal="' + origIdx + '"></div>' +
+      '<div class="scan-card-substats" data-scan-substats="' + origIdx + '"></div>' +
+    '</div>';
+  });
+
+  // Unmatched items: collapsed "Not in our catalog" notice. We can't add
+  // them to the comparison panel because we have no MSRP for them.
+  if (unmatched.length > 0) {
+    const partsHtml = unmatched
+      .map(r => esc((r.extracted.partNumber || '').toString().trim() || 'Not Found'))
+      .join(', ');
+    html += '<div class="scan-notfound">' +
+      '<span class="scan-notfound-title">Not Found (' + unmatched.length + ')</span>' +
+      'These part number' + (unmatched.length !== 1 ? 's appear' : ' appears') +
+      ' on your document but ' + (unmatched.length !== 1 ? 'are' : 'is') + ' not in our catalog, so ' +
+      (unmatched.length !== 1 ? 'they\u2019re' : 'it\u2019s') + ' excluded from the comparison:' +
+      '<div class="scan-notfound-list" style="margin-top:6px">' + partsHtml + '</div>' +
+    '</div>';
+  }
+
+  list.innerHTML = html;
+
+  // Live edits — qty / you-pay / disc inputs mutate scanResults[i].calc and
+  // re-run just the per-card markup math + totals. We don't re-render the
+  // whole DOM on every keystroke (would steal focus from the input).
+  list.addEventListener('input', function(e) {
+    const inp = e.target.closest('[data-scan-input]');
+    if (!inp) return;
+    const idx   = parseInt(inp.dataset.idx);
+    const field = inp.dataset.scanInput;
+    const r = scanResults[idx];
+    if (!r || !r.calc) return;
+    if (field === 'qty') {
+      r.calc.qty = Math.max(1, parseInt(inp.value) || 1);
+    } else if (field === 'youPay') {
+      r.calc.youPay = Math.max(0, parseFloat(inp.value) || 0);
+    } else if (field === 'disc') {
+      r.calc.disc = Math.min(99, Math.max(0, parseInt(inp.value) || 0));
+    }
+    syncScanResultsToSelected();
+    recalcScanCard(idx);
+    recalcScanTotals();
+  });
+
+  // Disambiguation dropdown — picking a different option swaps the
+  // selected catalog row and re-renders. Per-card calc values stay because
+  // we keep them on r.calc rather than reading from the catalog row.
+  list.addEventListener('change', function(e) {
+    const sel = e.target.closest('[data-scan-options]');
+    if (!sel) return;
+    const idx = parseInt(sel.dataset.scanOptions);
+    const optIdx = parseInt(sel.value);
+    const r = scanResults[idx];
+    if (r && Array.isArray(r.matchOptions) && r.matchOptions[optIdx]) {
+      r.catalog = r.matchOptions[optIdx];
+      renderScanResults();
+    }
+  });
+
+  // Initial calc fill so cards aren't blank when the page first appears
+  matched.forEach(r => recalcScanCard(scanResults.indexOf(r)));
+  recalcScanTotals();
 }
 
-function confirmScanResults() {
-  const toAdd = scanResults.filter(r => r.checked && r.matched);
-  if (toAdd.length === 0) {
-    dismissScanScreen();
+/* Scan-page calc helpers — per-card markup analysis and the top-of-page
+   totals banner. These mirror the math in recalcPanelTotals() but write
+   into the new scan-card DOM instead of the side panel.
+
+   Verdict thresholds (same as the side panel):
+     overpay: youPay > MSRP            → realDisc < -0.05%
+     ripoff:  stated - real > 3%
+     fair:    gap ≤ 1% and not overpriced
+     mild:    everything in between */
+
+function recalcScanCard(idx) {
+  const r = scanResults[idx];
+  if (!r || !r.matched || !r.calc) return;
+  const card    = document.querySelector('[data-scan-idx="' + idx + '"]');
+  const focal   = document.querySelector('[data-scan-focal="' + idx + '"]');
+  const sub     = document.querySelector('[data-scan-substats="' + idx + '"]');
+  const barEl   = document.querySelector('[data-scan-bar="' + idx + '"]');
+  if (!card || !focal || !sub) return;
+
+  const msrp     = r.catalog.price;
+  const lineMsrp = msrp * r.calc.qty;
+  if (barEl) renderScanCardBar(barEl, r);
+
+  // ── State 1: nothing entered yet — pending hero ──
+  if (r.calc.youPay <= 0) {
+    setCardVerdict(card, focal, 'pending', {
+      eyebrow: 'Awaiting your invoice price',
+      bigNum:  'Add what you pay',
+      sublabel: '',
+      desc:    'Enter what you pay per unit to see the gap between MSRP and what your supplier is charging.',
+    });
+    sub.innerHTML =
+      '<div><label>MSRP</label><span class="v">' + fmt(msrp) + '</span></div>' +
+      '<div><label>You Pay</label><span class="v">—</span></div>' +
+      '<div><label>Line Total (MSRP)</label><span class="v">' + fmt(lineMsrp) + '</span></div>';
     return;
   }
 
-  toAdd.forEach(r => {
+  const lineYouPay = r.calc.youPay * r.calc.qty;
+  const realDisc   = msrp > 0 ? ((msrp - r.calc.youPay) / msrp) * 100 : 0;
+
+  // ── State 2: You Pay only — show real discount as the hero ──
+  if (r.calc.disc <= 0) {
+    const partialClass = realDisc < -0.05 ? 'overpay' : realDisc > 0.05 ? 'fair' : 'mild';
+    let bigNum, sublabel, eyebrow, desc;
+    if (realDisc < -0.05) {
+      bigNum   = '+' + Math.abs(realDisc).toFixed(2) + '%';
+      sublabel = 'Above MSRP';
+      eyebrow  = 'Paying over manufacturer list';
+      desc     = 'You’re paying ' + Math.abs(realDisc).toFixed(1) + '% MORE than the manufacturer’s suggested retail price for this item.';
+    } else if (realDisc > 0.05) {
+      bigNum   = realDisc.toFixed(2) + '%';
+      sublabel = 'Off MSRP';
+      eyebrow  = 'Real discount';
+      desc     = 'You’re paying ' + realDisc.toFixed(1) + '% below MSRP. Add your supplier’s stated discount to see if any of it is hidden markup.';
+    } else {
+      bigNum   = 'At MSRP';
+      sublabel = '';
+      eyebrow  = 'Right at list price';
+      desc     = 'You’re paying exactly the manufacturer’s suggested retail price.';
+    }
+    setCardVerdict(card, focal, partialClass, { eyebrow, bigNum, sublabel, desc });
+    sub.innerHTML =
+      '<div><label>MSRP</label><span class="v">' + fmt(lineMsrp) + '</span></div>' +
+      '<div><label>You Pay</label><span class="v">' + fmt(lineYouPay) + '</span></div>' +
+      '<div><label>Real Discount</label><span class="v ' + (realDisc > 0.05 ? 'lime' : realDisc < -0.05 ? 'danger' : '') + '">' +
+        (realDisc >= 0 ? '' : '-') + Math.abs(realDisc).toFixed(2) + '%</span></div>';
+    return;
+  }
+
+  // ── State 3: full data — markup analysis hero ──
+  const suppListUnit = r.calc.youPay / (1 - r.calc.disc / 100);
+  const suppListLine = suppListUnit * r.calc.qty;
+  const markupLine   = (suppListUnit - msrp) * r.calc.qty;
+  const markupPct    = msrp > 0 ? ((suppListUnit - msrp) / msrp) * 100 : 0;
+  const gap          = r.calc.disc - realDisc;
+
+  let verdictClass, eyebrow, bigNum, sublabel, desc;
+  if (realDisc < -0.05) {
+    verdictClass = 'overpay'; eyebrow = 'Paying above MSRP';
+    bigNum   = '+' + Math.abs(realDisc).toFixed(1) + '%';
+    sublabel = 'Above manufacturer MSRP';
+    desc     = 'Your supplier is charging more than the manufacturer’s list price. The ' + r.calc.disc + '% discount they quoted is misleading — there’s no real discount happening.';
+  } else if (gap > 3) {
+    verdictClass = 'ripoff'; eyebrow = 'Inflated list price';
+    bigNum   = '+' + markupPct.toFixed(1) + '%';
+    sublabel = 'Hidden markup over MSRP';
+    desc     = 'Stated ' + r.calc.disc + '% off, but the real discount off MSRP is only ' + realDisc.toFixed(1) + '%. The difference is supplier margin baked into an inflated list price.';
+  } else if (gap <= 1) {
+    verdictClass = 'fair'; eyebrow = 'Competitively priced';
+    bigNum   = realDisc.toFixed(1) + '%';
+    sublabel = 'Real discount off MSRP';
+    desc     = 'Your supplier’s stated discount lines up with the real discount off MSRP. No hidden markup — this is honest pricing.';
+  } else {
+    verdictClass = 'mild'; eyebrow = 'Mild markup';
+    bigNum   = '+' + markupPct.toFixed(1) + '%';
+    sublabel = 'Hidden markup over MSRP';
+    desc     = 'Stated ' + r.calc.disc + '% vs. real ' + realDisc.toFixed(1) + '%. A small portion of the discount is inflated list price — worth pushing back on.';
+  }
+
+  setCardVerdict(card, focal, verdictClass, { eyebrow, bigNum, sublabel, desc });
+
+  const markupCls = markupLine > 0.005 ? 'danger' : markupLine < -0.005 ? 'lime' : '';
+  sub.innerHTML =
+    '<div><label>MSRP</label><span class="v">' + fmt(lineMsrp) + '</span></div>' +
+    '<div><label>Supplier List</label><span class="v">' + fmt(suppListLine) + '</span></div>' +
+    '<div><label>Hidden Markup</label><span class="v ' + markupCls + '">' +
+      (markupLine >= 0 ? '+' : '-') + fmt(Math.abs(markupLine)) + '</span></div>';
+}
+
+/* Renders the focal block on a card, sets the card's verdict class, and
+   animates the big number on each value change so the user feels the
+   markup story update as they type. */
+function setCardVerdict(card, focal, cls, parts) {
+  card.className = 'scan-card verdict-' + cls;
+  focal.className = 'scan-card-focal ' + cls;
+  focal.innerHTML =
+    '<span class="scan-card-focal-eyebrow"><span class="dot"></span>' + esc(parts.eyebrow) + '</span>' +
+    '<span class="scan-card-focal-num" data-focal-num>' + esc(parts.bigNum) + '</span>' +
+    (parts.sublabel ? '<span class="scan-card-focal-sublabel">' + esc(parts.sublabel) + '</span>' : '') +
+    (parts.desc ? '<div class="scan-card-focal-desc">' + esc(parts.desc) + '</div>' : '');
+  // Subtle pop animation on the focal number whenever it re-renders so the
+  // value feels "alive" as the user adjusts inputs.
+  const num = focal.querySelector('[data-focal-num]');
+  if (num) {
+    num.style.animation = 'none';
+    // Force reflow to restart the keyframes
+    void num.offsetWidth;
+    num.style.animation = 'focalNumPop .35s cubic-bezier(.2,1.4,.4,1)';
+  }
+}
+
+/* Mini bar visualization on each card. Communicates the markup story
+   at-a-glance, before the user reads any numbers:
+     - lime segment   = what you actually pay
+     - grey segment   = the MSRP they SHOULD be charging (a real discount)
+     - red segment    = the supplier's hidden markup above MSRP
+   The relative widths animate via CSS transitions so adjustments to the
+   You Pay / Disc inputs feel responsive. */
+function renderScanCardBar(el, r) {
+  if (!r || !r.matched || !r.calc) return;
+  const msrp = r.catalog.price;
+  if (msrp <= 0) { el.innerHTML = ''; return; }
+
+  // Pending — show a hint bar so the area isn't empty.
+  if (r.calc.youPay <= 0) {
+    el.innerHTML =
+      '<div class="scan-card-bar"><div class="scan-card-bar-seg gap" style="width:100%"></div></div>' +
+      '<div class="scan-card-bar-legend"><span>Add what you pay to see the gap</span><span>MSRP ' + fmt(msrp) + '</span></div>';
+    return;
+  }
+
+  // No discount entered — comparison is just You Pay vs MSRP.
+  if (r.calc.disc <= 0) {
+    const youW   = Math.min(100, (r.calc.youPay / msrp) * 100);
+    const gapW   = Math.max(0, 100 - youW);
+    el.innerHTML =
+      '<div class="scan-card-bar">' +
+        '<div class="scan-card-bar-seg you" style="width:' + youW.toFixed(2) + '%"></div>' +
+        '<div class="scan-card-bar-seg gap" style="width:' + gapW.toFixed(2) + '%"></div>' +
+      '</div>' +
+      '<div class="scan-card-bar-legend"><span>You pay ' + fmt(r.calc.youPay) + '</span><span>MSRP ' + fmt(msrp) + '</span></div>';
+    return;
+  }
+
+  // Full state — derive supplier list and show a three-segment bar.
+  const suppList = r.calc.youPay / (1 - r.calc.disc / 100);
+  const ceiling  = Math.max(suppList, msrp) * 1.05;
+  const youW     = Math.min(100, (r.calc.youPay / ceiling) * 100);
+  let gapW       = Math.max(0, ((msrp - r.calc.youPay) / ceiling) * 100);
+  let markupW    = Math.max(0, ((suppList - msrp) / ceiling) * 100);
+  if (markupW + gapW + youW > 100) {
+    // Clamp to 100% to avoid overflow at edge cases (shouldn't happen)
+    const k = 100 / (markupW + gapW + youW);
+    markupW *= k; gapW *= k;
+  }
+  el.innerHTML =
+    '<div class="scan-card-bar">' +
+      '<div class="scan-card-bar-seg you" style="width:' + youW.toFixed(2) + '%"></div>' +
+      '<div class="scan-card-bar-seg gap" style="width:' + gapW.toFixed(2) + '%"></div>' +
+      '<div class="scan-card-bar-seg markup" style="width:' + markupW.toFixed(2) + '%"></div>' +
+    '</div>' +
+    '<div class="scan-card-bar-legend">' +
+      '<span>You pay ' + fmt(r.calc.youPay) + '</span>' +
+      '<span>Supplier list ' + fmt(suppList) + '</span>' +
+    '</div>';
+}
+
+function recalcScanTotals() {
+  const banner = document.getElementById('scan-totals');
+  const cta    = document.getElementById('scan-cta');
+  if (!banner) return;
+  const matched = scanResults.filter(r => r.matched && r.calc);
+  if (matched.length === 0) {
+    banner.style.display = 'none';
+    if (cta) cta.style.display = 'none';
+    return;
+  }
+
+  let msrpTotal = 0, youPayTotal = 0, suppListTotal = 0, hasInput = false, hasDisc = false;
+  matched.forEach(r => {
+    msrpTotal += r.catalog.price * r.calc.qty;
+    if (r.calc.youPay > 0) {
+      hasInput = true;
+      youPayTotal += r.calc.youPay * r.calc.qty;
+      if (r.calc.disc > 0) {
+        hasDisc = true;
+        suppListTotal += (r.calc.youPay / (1 - r.calc.disc / 100)) * r.calc.qty;
+      }
+    }
+  });
+  const markupTotal     = suppListTotal > 0 ? suppListTotal - msrpTotal : 0;
+  const realOverallDisc = (hasInput && msrpTotal > 0) ? ((msrpTotal - youPayTotal) / msrpTotal) * 100 : 0;
+  const isAlarm         = markupTotal > 0.5;
+  const isFair          = !isAlarm && hasInput && markupTotal >= -0.5;
+
+  // Reset state classes so the banner picks the right palette this render.
+  banner.className = 'scan-totals' + (isAlarm ? ' alarm' : '') + (isFair ? ' fair' : '');
+  banner.style.display = '';
+
+  // ── Status pill + bold one-line title with glowing accent number. Punchy,
+  //    sales-oriented copy that drives the conversion message. ──
+  let eyebrowText, titleHtml, ctaLabel;
+  if (!hasInput) {
+    eyebrowText = '● Catalog tracked';
+    titleHtml = '<span class="pa-headline-accent">' + esc(fmt(msrpTotal)) + '</span> in MSRP across ' + matched.length + ' items — add prices to expose markup.';
+    ctaLabel  = 'Get a Quote';
+  } else if (isAlarm) {
+    eyebrowText = '⚠ Hidden markup detected';
+    titleHtml = 'Your supplier hid <span class="pa-headline-accent">' + esc('+' + fmt(markupTotal)) + '</span> in markup above MSRP.';
+    ctaLabel  = 'Stop Overpaying →';
+  } else if (markupTotal < -0.5) {
+    eyebrowText = '✓ Below MSRP — clean pricing';
+    titleHtml = 'You\'re paying <span class="pa-headline-accent">' + realOverallDisc.toFixed(1) + '%</span> below MSRP — no hidden markup.';
+    ctaLabel  = 'Get a Comparison Quote →';
+  } else {
+    eyebrowText = hasDisc ? '✓ No hidden markup' : '✓ Real savings detected';
+    titleHtml = 'You\'re saving <span class="pa-headline-accent">' + realOverallDisc.toFixed(1) + '%</span> off manufacturer MSRP.';
+    ctaLabel  = 'Get a Quote →';
+  }
+
+  // Hidden Markup tile — the headline finding, always emphasized
+  let markupTileVal, markupTileClass;
+  if (!hasDisc) {
+    markupTileVal   = 'Add disc %';
+    markupTileClass = 'pa-stat-pending';
+  } else if (Math.abs(markupTotal) <= 0.5) {
+    markupTileVal   = 'None';
+    markupTileClass = 'pa-stat-clean';
+  } else if (markupTotal > 0) {
+    markupTileVal   = '+' + fmt(markupTotal);
+    markupTileClass = 'pa-stat-danger';
+  } else {
+    markupTileVal   = '−' + fmt(Math.abs(markupTotal));
+    markupTileClass = 'pa-stat-accent';
+  }
+
+  const realDiscIsPositive = realOverallDisc > 0.05;
+  const realDiscDisplay    = hasInput
+    ? (realOverallDisc >= 0 ? '' : '-') + Math.abs(realOverallDisc).toFixed(1) + '%'
+    : '—';
+
+  const ctaArrowSvg =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/>' +
+    '</svg>';
+
+  banner.innerHTML =
+    '<div class="pa-bar-top">' +
+      '<div class="pa-bar-lead">' +
+        '<div class="pa-eyebrow"><span class="dot"></span><span>' + esc(eyebrowText) + '</span></div>' +
+        '<div class="pa-bar-title">' + titleHtml + '</div>' +
+      '</div>' +
+      '<a class="pa-bar-cta" href="https://industrialfinishes.com/quick-quote/" target="_blank" rel="noopener">' +
+        ctaArrowSvg + esc(ctaLabel) +
+      '</a>' +
+    '</div>' +
+    '<div class="pa-bar-stats">' +
+      '<div class="pa-stat"><span class="pa-stat-label">Items</span>' +
+        '<span class="pa-stat-val">' + matched.length + '</span></div>' +
+      '<div class="pa-stat"><span class="pa-stat-label">MSRP Total</span>' +
+        '<span class="pa-stat-val">' + esc(fmt(msrpTotal)) + '</span></div>' +
+      '<div class="pa-stat"><span class="pa-stat-label">You Pay</span>' +
+        '<span class="pa-stat-val">' + (hasInput ? esc(fmt(youPayTotal)) : '—') + '</span></div>' +
+      '<div class="pa-stat ' + (realDiscIsPositive ? 'pa-stat-accent' : '') + '">' +
+        '<span class="pa-stat-label">Real Discount</span>' +
+        '<span class="pa-stat-val">' + esc(realDiscDisplay) + '</span></div>' +
+      '<div class="pa-stat pa-stat-headline ' + markupTileClass + '">' +
+        '<span class="pa-stat-label">Hidden Markup</span>' +
+        '<span class="pa-stat-val">' + esc(markupTileVal) + '</span></div>' +
+    '</div>';
+
+  if (cta) renderScanCta(cta, { isAlarm, isFair, hasInput, markupTotal, msrpTotal, matched });
+}
+
+/* The CTA below the cards adapts its copy and color to the markup story.
+   No projected savings claims — we only invite the user to send their list
+   for a real quote. The transparency story is the whole pitch. */
+function renderScanCta(cta, state) {
+  const { isAlarm, isFair, hasInput, markupTotal, matched } = state;
+  cta.className = 'scan-cta' + (isAlarm ? ' alarm' : '');
+  cta.style.display = '';
+
+  let title, sub, btnLabel;
+  if (isAlarm) {
+    title = 'Get a quote without the hidden markup.';
+    sub   = 'You just identified ' + fmt(markupTotal) + ' in markup baked above manufacturer MSRP across ' + matched.length + ' items. ' +
+            'Send us this list and Industrial Finishes will quote the same products against MSRP — no inflated list price.';
+    btnLabel = 'Request a Quote';
+  } else if (isFair) {
+    title = 'Honest pricing on your end. Want a second quote?';
+    sub   = 'Your supplier’s stated discount matches the real discount off MSRP — no hidden markup. If you want Industrial Finishes to quote these ' + matched.length + ' items for comparison, we’re happy to run one.';
+    btnLabel = 'Request a Comparison Quote';
+  } else {
+    title = 'Get a quote on these ' + matched.length + ' items.';
+    sub   = 'You’ve got the manufacturer MSRP for everything on your invoice. Industrial Finishes can quote real pricing on the same items — usually within an hour during business hours.';
+    btnLabel = 'Request a Quote on These Items';
+  }
+
+  cta.innerHTML =
+    '<div class="scan-cta-text">' +
+      '<div class="scan-cta-title">' + esc(title) + '</div>' +
+      '<div class="scan-cta-sub">' + sub + '</div>' +
+    '</div>' +
+    '<div class="scan-cta-actions">' +
+      '<a class="scan-cta-btn" href="https://industrialfinishes.com/quick-quote/" target="_blank" rel="noopener">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z"/></svg>' +
+        esc(btnLabel) +
+      '</a>' +
+    '</div>';
+}
+
+/* Push every matched scan result into the global selected[] array so the
+   existing CSV export and side-panel calculator stay consistent. Idempotent
+   — re-running just updates qty/youPay/disc on already-tracked items. */
+function syncScanResultsToSelected() {
+  scanResults.forEach(r => {
+    if (!r.matched || !r.catalog || !r.calc) return;
     const cat = r.catalog;
-    const ext = r.extracted;
-    // Check if already selected
     const existing = findSelected(cat);
     if (existing >= 0) {
-      // Update existing entry with scanned values
-      selected[existing].qty = ext.quantity || 1;
-      if (ext.unitPrice > 0) selected[existing].youPay = ext.unitPrice;
-      if (ext.discountPercent > 0) selected[existing].disc = ext.discountPercent;
+      selected[existing].qty    = r.calc.qty;
+      selected[existing].youPay = r.calc.youPay;
+      selected[existing].disc   = r.calc.disc;
+      // Keep the catalog metadata in sync too (in case user picked a different
+      // option in the disambiguation dropdown).
+      selected[existing].desc     = cat.desc;
+      selected[existing].part     = cat.part;
+      selected[existing].size     = cat.size;
+      selected[existing].price    = cat.price;
+      selected[existing].vendor   = cat.vendor;
+      selected[existing].category = cat.category;
+      selected[existing].catName  = cat.catName;
     } else {
       selected.unshift({
-        desc: cat.desc,
-        part: cat.part,
-        size: cat.size,
-        price: cat.price,
-        vendor: cat.vendor,
-        category: cat.category,
-        catName: cat.catName,
-        qty: ext.quantity || 1,
-        youPay: ext.unitPrice || 0,
-        disc: ext.discountPercent || 0
+        desc: cat.desc, part: cat.part, size: cat.size, price: cat.price,
+        vendor: cat.vendor, category: cat.category, catName: cat.catName,
+        qty: r.calc.qty, youPay: r.calc.youPay, disc: r.calc.disc,
       });
     }
   });
-
   saveSelection();
-  render();
-  dismissScanScreen();
-  openPanel();
-}
-
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function pdfToImages(file) {
-  // Render PDF pages to PNG images using PDF.js
-  const arrayBuf = await file.arrayBuffer();
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
-  const pageCount = Math.min(pdf.numPages, 10); // cap at 10 pages
-  const images = [];
-
-  for (let i = 1; i <= pageCount; i++) {
-    const page = await pdf.getPage(i);
-    const scale = 2; // 2x for readability
-    const viewport = page.getViewport({ scale: scale });
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-    const dataUrl = canvas.toDataURL('image/png');
-    images.push(dataUrl.split(',')[1]); // base64 only
-  }
-  return images;
-}
-
-async function callClaudeDirect(file) {
-  // Dev mode: call Claude API directly from browser (no PHP needed)
-  const apiKey = localStorage.getItem('ifs_api_key') || prompt('Enter your Anthropic API key for local testing.\nThis is stored in localStorage and never sent anywhere except api.anthropic.com.');
-  if (!apiKey) throw new Error('API key required for local testing.');
-  localStorage.setItem('ifs_api_key', apiKey);
-
-  const isPdf = file.type === 'application/pdf';
-  const contentBlocks = [];
-
-  if (isPdf) {
-    // Convert PDF pages to images for models without native PDF support
-    document.getElementById('scan-status').textContent = 'Converting PDF pages\u2026';
-    const pages = await pdfToImages(file);
-    pages.forEach(b64 => {
-      contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: 'image/png', data: b64 } });
-    });
-  } else {
-    const base64 = await fileToBase64(file);
-    contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } });
-  }
-
-  contentBlocks.push({ type: 'text', text: SCAN_PROMPT });
-
-  document.getElementById('scan-status').textContent = 'Extracting line items\u2026';
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-3-haiku-20240307',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: contentBlocks }]
-    })
-  });
-
-  if (!resp.ok) {
-    const errBody = await resp.text().catch(() => '');
-    console.error('Claude API error:', resp.status, errBody);
-    let msg = 'Claude API error (' + resp.status + ')';
-    try { const j = JSON.parse(errBody); msg = (j.error && j.error.message) || msg; } catch(e) {}
-    throw new Error(msg);
-  }
-
-  const result = await resp.json();
-  let text = (result.content && result.content[0] && result.content[0].text) || '';
-  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-  const items = JSON.parse(text);
-  if (!Array.isArray(items)) throw new Error('Unexpected AI response.');
-  return items;
+  // Keep the floating panel badge + side panel content in sync. Cheap
+  // — just updates DOM counters and pricing rows that are off-screen
+  // while the scan overlay is visible.
+  if (typeof updatePanel === 'function') updatePanel();
 }
 
 async function callClaudeViaProxy(file) {
-  // Production: use PHP proxy
+  // The scanner only ever talks to our PHP proxy, which holds the API key
+  // server-side. The browser never has access to the key under any path.
   const formData = new FormData();
   formData.append('image', file);
   const resp = await fetch(SCAN_API_URL, { method: 'POST', body: formData });
@@ -2278,7 +2842,7 @@ async function handleScanUpload(file) {
   try {
     document.getElementById('scan-status').textContent = 'Extracting line items\u2026';
 
-    const items = _isProd ? await callClaudeViaProxy(file) : await callClaudeDirect(file);
+    const items = await callClaudeViaProxy(file);
 
     if (!items || items.length === 0) {
       throw new Error('No line items found in the document. Try a clearer image.');
@@ -2287,7 +2851,7 @@ async function handleScanUpload(file) {
     document.getElementById('scan-status').textContent = 'Matching against catalog\u2026';
     await new Promise(r => setTimeout(r, 300));
 
-    scanResults = matchExtractedItems(items);
+    scanResults = await matchExtractedItems(items);
     renderScanResults();
     showScanState('scan-results');
 
@@ -2338,8 +2902,16 @@ function initScanScreen() {
     document.getElementById('scan-gallery').value = '';
   });
 
-  // Confirm
-  document.getElementById('scan-confirm').addEventListener('click', confirmScanResults);
+  // Export Report — reuses the existing CSV export logic in the side panel
+  // (which reads selected[] — already kept in sync by syncScanResultsToSelected).
+  document.getElementById('scan-export').addEventListener('click', function() {
+    if (selected.length === 0) return;
+    if (!hasEmail()) {
+      requireEmail('export', () => document.getElementById('sp-export').click());
+      return;
+    }
+    document.getElementById('sp-export').click();
+  });
 
   // Desktop toolbar button — opens file picker directly, no overlay
   var desktopFileInput = document.getElementById('scan-desktop-file');

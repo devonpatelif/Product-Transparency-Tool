@@ -14,7 +14,10 @@ if (file_exists($localConf)) require_once $localConf;
 // ─── Configuration ───────────────────────────────────────────
 $allowedHost = 'industrialfinishes.com';
 $apiKey      = getenv('ANTHROPIC_API_KEY');
-$model       = 'claude-3-5-sonnet-20241022';
+// Haiku 4.5 — vision-capable, cheap, fast. Good fit for invoice OCR where
+// cost scales linearly with visitor count and accuracy is bounded by the
+// quality of the photo, not the model.
+$model       = 'claude-haiku-4-5-20251001';
 $maxTokens   = 4096;
 $maxFileSize = 10 * 1024 * 1024; // 10 MB
 
@@ -79,11 +82,9 @@ $allowedTypes = [
     'application/pdf' => 'document',
 ];
 
-$finfo    = finfo_open(FILEINFO_MIME_TYPE);
-$mimeType = finfo_file($finfo, $file['tmp_name']);
-finfo_close($finfo);
+$mimeType = detectMimeType($file['tmp_name']);
 
-if (!isset($allowedTypes[$mimeType])) {
+if ($mimeType === null || !isset($allowedTypes[$mimeType])) {
     http_response_code(400);
     echo json_encode(['error' => 'Unsupported file type. Use JPEG, PNG, GIF, WebP, or PDF.']);
     exit;
@@ -147,29 +148,46 @@ $payload = [
 ];
 
 // ─── Call Claude API ────────────────────────────────────────
-$ch = curl_init('https://api.anthropic.com/v1/messages');
-curl_setopt_array($ch, [
-    CURLOPT_POST           => true,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 60,
-    CURLOPT_HTTPHEADER     => [
-        'Content-Type: application/json',
-        'x-api-key: ' . $apiKey,
-        'anthropic-version: 2023-06-01',
-    ],
-    CURLOPT_POSTFIELDS => json_encode($payload),
-]);
+$claudeUrl     = 'https://api.anthropic.com/v1/messages';
+$claudeHeaders = [
+    'Content-Type: application/json',
+    'x-api-key: ' . $apiKey,
+    'anthropic-version: 2023-06-01',
+];
+$claudeBody    = json_encode($payload);
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlErr  = curl_error($ch);
-curl_close($ch);
+$apiResult = postJsonToClaude($claudeUrl, $claudeHeaders, $claudeBody, 60);
 
-if ($curlErr) {
+// On DNS resolution failure (errno 6 = CURLE_COULDNT_RESOLVE_HOST), bypass the
+// system resolver via DNS-over-HTTPS and retry with the IP pinned. Some
+// corporate DNS servers return only AAAA (or nothing) for api.anthropic.com,
+// breaking IPv4-only clients. This path keeps the tool working for users
+// behind those resolvers without requiring hosts-file edits or admin access.
+if ($apiResult['error'] && (int)($apiResult['errno'] ?? 0) === 6) {
+    $ip = resolveViaDoH('api.anthropic.com');
+    if ($ip) {
+        error_log("[api-analyze] local DNS failed for api.anthropic.com; retrying via DoH-resolved IP $ip");
+        $apiResult = postJsonToClaude(
+            $claudeUrl, $claudeHeaders, $claudeBody, 60,
+            ['api.anthropic.com:443:' . $ip]
+        );
+    }
+}
+
+if ($apiResult['error']) {
+    error_log("[api-analyze] reach-AI failed: " . ($apiResult['debug'] ?? '(no debug info)'));
     http_response_code(502);
-    echo json_encode(['error' => 'Failed to reach AI service.']);
+    $errPayload = ['error' => 'Failed to reach AI service.'];
+    // Surface the actual cURL/stream error in dev so future failures don't
+    // require digging through PHP's error log to diagnose.
+    if (!$isProd && !empty($apiResult['debug'])) {
+        $errPayload['debug'] = $apiResult['debug'];
+    }
+    echo json_encode($errPayload);
     exit;
 }
+$response = $apiResult['body'];
+$httpCode = $apiResult['status'];
 
 if ($httpCode !== 200) {
     http_response_code(502);
@@ -216,3 +234,130 @@ foreach ($items as $item) {
 }
 
 echo json_encode(['items' => $clean]);
+
+
+/**
+ * POST a JSON body to a URL. Uses cURL when available (production hosts),
+ * falls back to PHP's stream wrapper when cURL is missing (Windows dev).
+ * Returns ['status' => int, 'body' => string|null, 'error' => bool].
+ */
+function postJsonToClaude($url, array $headers, $body, $timeout, $resolveOverride = null) {
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        $opts = [
+            CURLOPT_POST           => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => $timeout,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_POSTFIELDS     => $body,
+        ];
+        // CURLOPT_RESOLVE pins host:port → IP without changing SNI/Host
+        // headers, so TLS verification still works. Used by the DoH retry
+        // path when system DNS is broken for api.anthropic.com.
+        if ($resolveOverride) $opts[CURLOPT_RESOLVE] = $resolveOverride;
+        curl_setopt_array($ch, $opts);
+        $resp   = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err    = curl_error($ch);
+        $errno  = curl_errno($ch);
+        return [
+            'status' => $status,
+            'body'   => $resp === false ? null : $resp,
+            'error'  => $err !== '',
+            'errno'  => $errno,
+            'debug'  => $err !== '' ? 'curl(' . $errno . '): ' . $err : '',
+        ];
+    }
+
+    // Stream fallback. ignore_errors lets us read the body on 4xx/5xx.
+    $ctx = stream_context_create([
+        'http' => [
+            'method'        => 'POST',
+            'header'        => implode("\r\n", $headers) . "\r\n",
+            'content'       => $body,
+            'timeout'       => $timeout,
+            'ignore_errors' => true,
+        ],
+        'ssl' => [
+            'verify_peer'      => true,
+            'verify_peer_name' => true,
+        ],
+    ]);
+    $resp = @file_get_contents($url, false, $ctx);
+    $status = 0;
+    if (isset($http_response_header[0]) && preg_match('#HTTP/\S+\s+(\d+)#', $http_response_header[0], $m)) {
+        $status = (int) $m[1];
+    }
+    $err = '';
+    if ($resp === false) {
+        $last = error_get_last();
+        $err = $last && isset($last['message']) ? 'stream: ' . $last['message'] : 'stream: unknown';
+    }
+    return [
+        'status' => $status,
+        'body'   => $resp === false ? null : $resp,
+        'error'  => $resp === false,
+        'errno'  => 0,
+        'debug'  => $err,
+    ];
+}
+
+/**
+ * Resolves a hostname's A record via DNS-over-HTTPS (Google's resolver).
+ * Returns the first IPv4 address as a string, or null on failure.
+ *
+ * Used as a fallback when the system resolver fails to return an A record
+ * (observed: corporate DNS returning AAAA-only for api.anthropic.com).
+ * dns.google itself is pinned to its known anycast IPs (8.8.8.8 / 8.8.4.4)
+ * so a broken local resolver can't break the bypass too — SNI still says
+ * "dns.google" via CURLOPT_RESOLVE so TLS verifies cleanly.
+ */
+function resolveViaDoH($host, $timeout = 8) {
+    if (!function_exists('curl_init')) return null;
+    $url = 'https://dns.google/resolve?name=' . urlencode($host) . '&type=A';
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_RESOLVE        => [
+            'dns.google:443:8.8.8.8',
+            'dns.google:443:8.8.4.4',
+        ],
+        CURLOPT_HTTPHEADER     => ['Accept: application/dns-json'],
+    ]);
+    $resp = curl_exec($ch);
+    $err  = curl_error($ch);
+    if ($resp === false || $err !== '') {
+        error_log("[api-analyze] DoH resolve failed for $host: $err");
+        return null;
+    }
+    $data = json_decode($resp, true);
+    if (!isset($data['Answer']) || !is_array($data['Answer'])) return null;
+    foreach ($data['Answer'] as $ans) {
+        // type 1 = A record (IPv4)
+        if (isset($ans['type']) && (int)$ans['type'] === 1 && !empty($ans['data'])) {
+            return $ans['data'];
+        }
+    }
+    return null;
+}
+
+/**
+ * Detect MIME type by sniffing the file's magic bytes. Avoids the
+ * `fileinfo` PHP extension, which is disabled on some Windows builds.
+ * Returns null if the bytes don't match any of the types we support.
+ */
+function detectMimeType($path) {
+    $fp = @fopen($path, 'rb');
+    if (!$fp) return null;
+    $bytes = fread($fp, 12);
+    fclose($fp);
+    if ($bytes === false || $bytes === '') return null;
+
+    if (strncmp($bytes, "\xFF\xD8\xFF", 3) === 0)                                    return 'image/jpeg';
+    if (strncmp($bytes, "\x89PNG\r\n\x1A\n", 8) === 0)                               return 'image/png';
+    if (strncmp($bytes, 'GIF87a', 6) === 0 || strncmp($bytes, 'GIF89a', 6) === 0)    return 'image/gif';
+    if (strncmp($bytes, 'RIFF', 4) === 0 && substr($bytes, 8, 4) === 'WEBP')         return 'image/webp';
+    if (strncmp($bytes, '%PDF',  4) === 0)                                           return 'application/pdf';
+    return null;
+}
