@@ -411,7 +411,11 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
   border:1px solid rgba(194,213,1,.22);
   box-shadow:0 6px 20px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05);
   display:flex;flex-direction:column;gap:14px;overflow:hidden;
-  animation:scanBannerRise .55s cubic-bezier(.2,.7,.2,1) both}
+  animation:scanBannerRise .55s cubic-bezier(.2,.7,.2,1) both;
+  /* Smooth blend between neutral / fair / alarm states. The headline copy +
+     accent colors get rebuilt on every recalc (innerHTML replace), but the
+     banner itself persists, so the banner-level properties can transition. */
+  transition:background-color .35s ease-out,border-color .35s ease-out,box-shadow .35s ease-out}
 @keyframes scanBannerRise{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
 
 /* Alarm state — markup detected → red wash + slow border pulse to draw the eye */
@@ -425,6 +429,31 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 @keyframes paAlarmPulse{
   0%,100%{box-shadow:0 6px 20px rgba(0,0,0,.28),0 0 24px rgba(255,91,91,.12),inset 0 1px 0 rgba(255,255,255,.04)}
   50%{box-shadow:0 6px 20px rgba(0,0,0,.28),0 0 56px rgba(255,91,91,.32),inset 0 1px 0 rgba(255,255,255,.04)}}
+
+/* Alarm onset — a one-shot pop+flash+shake when the banner first transitions
+   INTO the alarm state. Triggered from JS by adding .alarm-enter to the
+   banner; the JS removes the class on `animationend` so it can re-fire on
+   subsequent transitions. Honors prefers-reduced-motion: motion-sensitive
+   users still get the smooth color blend, but skip the shake/pop. */
+@media (prefers-reduced-motion: no-preference){
+  .scan-totals.alarm.alarm-enter{
+    animation:scanBannerRise .55s cubic-bezier(.2,.7,.2,1) both,
+              paAlarmEnter .65s cubic-bezier(.2,.7,.2,1) both,
+              paAlarmPulse 2.8s ease-in-out infinite .65s}
+}
+@keyframes paAlarmEnter{
+  /* Flash: brighter red glow ramps up by 22%, eases back to steady alarm.
+     Pop: scale up 1.2% then settle. Shake: 2-3px horizontal jitter, single
+     decaying cycle layered through the middle of the animation. */
+  0%  {transform:translateX(0) scale(1);
+       box-shadow:0 6px 20px rgba(0,0,0,.28),0 0 24px rgba(255,91,91,.12),inset 0 1px 0 rgba(255,255,255,.04)}
+  22% {transform:translateX(-3px) scale(1.012);
+       box-shadow:0 8px 28px rgba(0,0,0,.32),0 0 72px rgba(255,91,91,.55),0 0 0 4px rgba(255,91,91,.18),inset 0 1px 0 rgba(255,255,255,.05)}
+  38% {transform:translateX(3px) scale(1.012)}
+  55% {transform:translateX(-2px) scale(1.006)}
+  72% {transform:translateX(1px) scale(1)}
+  100%{transform:translateX(0) scale(1);
+       box-shadow:0 6px 20px rgba(0,0,0,.28),0 0 24px rgba(255,91,91,.12),inset 0 1px 0 rgba(255,255,255,.04)}}
 
 /* ── Top row: eyebrow + bold title (left) + CTA (right) ── */
 .pa-bar-top{display:flex;align-items:center;gap:18px}
@@ -584,18 +613,6 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .scan-card-vendor::before{content:'';width:4px;height:4px;border-radius:50%;
   background:var(--text-muted);margin-right:8px;flex-shrink:0;opacity:.6}
 
-/* Mini bar visualization — at-a-glance ratio of MSRP vs You Pay. The
-   green segment grows to fill what they're paying; the red segment is
-   the supplier's hidden markup. Animated width transitions on update. */
-.scan-card-bar{position:relative;height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;display:flex}
-.scan-card-bar-seg{height:100%;transition:width .55s cubic-bezier(.2,.7,.2,1)}
-.scan-card-bar-seg.you{background:linear-gradient(90deg,var(--lime),#a3b800)}
-.scan-card-bar-seg.gap{background:rgba(255,255,255,.08)}
-.scan-card-bar-seg.markup{background:linear-gradient(90deg,#ff8c00,#ff4d4d)}
-.scan-card-bar-legend{display:flex;justify-content:space-between;font-size:10.5px;font-weight:600;
-  letter-spacing:.3px;color:var(--text-muted);margin-top:8px;text-transform:uppercase;
-  font-feature-settings:'tnum'}
-
 .scan-card-pricegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .scan-input-cell{display:flex;flex-direction:column;gap:6px}
 .scan-input-cell label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted)}
@@ -607,67 +624,96 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .scan-input:focus{border-color:var(--lime);background:rgba(0,0,0,.32);box-shadow:0 0 0 3px rgba(194,213,1,.12)}
 .scan-input::-webkit-outer-spin-button,.scan-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 
-/* ── Focal verdict block — the headline finding per card.
-     Cleaner type: lighter weight, no drop-shadow filters (they smudge),
-     subtle text-shadow for color resonance only. ── */
-.scan-card-focal{position:relative;padding:16px 18px;border-radius:12px;border:1px solid;overflow:hidden;
-  display:flex;flex-direction:column;gap:5px;animation:focalIn .45s cubic-bezier(.2,.7,.2,1) both}
-.scan-card-focal::before{content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 80% 100% at 100% 0%,currentColor,transparent 60%);
-  opacity:.07;pointer-events:none}
-@keyframes focalIn{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
+/* Scan-card prices grid uses the side-panel's .sp-prices styling. The
+   alarm pulse from .scan-card.verdict-overpay (defined elsewhere) still
+   provides the visual urgency for overpriced items. The .sp-* classes
+   were originally written for the always-dark side panel, so we override
+   their colors here to follow the theme variables. */
+.scan-card .sp-prices{margin-top:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.scan-card .sp-price-label{color:var(--text-muted)}
+.scan-card .sp-price-val{color:var(--text-primary)}
+.scan-card .sp-savings-val{color:var(--lime)}
+[data-theme="light"] .scan-card .sp-prices{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.07)}
+[data-theme="light"] .scan-card .sp-price-label{color:var(--text-secondary)}
+[data-theme="light"] .scan-card .sp-savings-val{color:var(--green-brand)}
 
-.scan-card-focal.fair    {background:linear-gradient(135deg,rgba(194,213,1,.08),rgba(194,213,1,0));border-color:rgba(194,213,1,.2);color:var(--lime)}
-.scan-card-focal.mild    {background:linear-gradient(135deg,rgba(255,165,0,.07),rgba(255,165,0,0));border-color:rgba(255,165,0,.18);color:#ffa500}
-.scan-card-focal.ripoff  {background:linear-gradient(135deg,rgba(255,140,0,.09),rgba(255,140,0,0));border-color:rgba(255,140,0,.22);color:#ff8c00}
-.scan-card-focal.overpay {background:linear-gradient(135deg,rgba(255,77,77,.1),rgba(255,77,77,0));border-color:rgba(255,77,77,.26);color:#ff5b5b;
-  box-shadow:0 0 0 2px rgba(255,77,77,.05),0 0 14px rgba(255,77,77,.08);
-  animation:focalIn .45s cubic-bezier(.2,.7,.2,1) both,focalAlarm 2.8s ease-in-out infinite .45s}
-.scan-card-focal.pending {background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.07);color:var(--text-muted)}
-/* Always-on glow with visible breath — no flicker. */
-@keyframes focalAlarm{
-  0%,100%{box-shadow:0 0 0 2px rgba(255,77,77,.05),0 0 14px rgba(255,77,77,.08)}
-  50%{box-shadow:0 0 0 6px rgba(255,77,77,.14),0 0 32px rgba(255,77,77,.24)}}
+/* Discount breakdown wrapper + bar track. Inline-styled HTML in
+   recalcScanCard adds the .scan-bdown / .scan-bdown-bar classes; we
+   put theme-aware backgrounds + borders here instead of inline so
+   they render correctly on both dark and light themes. */
+.scan-bdown{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px;margin-top:6px}
+[data-theme="light"] .scan-bdown{background:rgba(0,0,0,.035);border-color:rgba(0,0,0,.08)}
+.scan-bdown-bar{position:relative;height:24px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden}
+[data-theme="light"] .scan-bdown-bar{background:rgba(0,0,0,.07)}
+.scan-bdown hr.bdown-sep{border:none;border-top:1px solid rgba(255,255,255,.07);margin:10px 0}
+[data-theme="light"] .scan-bdown hr.bdown-sep{border-top-color:rgba(0,0,0,.08)}
 
-.scan-card-focal-eyebrow{position:relative;z-index:1;font-size:10px;font-weight:700;
-  text-transform:uppercase;letter-spacing:1.4px;display:flex;align-items:center;gap:8px;
-  color:currentColor;opacity:.92}
-.scan-card-focal-eyebrow .dot{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block}
-.scan-card-focal.overpay .scan-card-focal-eyebrow .dot{animation:focalDotPulse 1.4s ease-in-out infinite}
-@keyframes focalDotPulse{0%{box-shadow:0 0 0 0 rgba(255,91,91,.6)}70%{box-shadow:0 0 0 10px rgba(255,91,91,0)}100%{box-shadow:0 0 0 0 rgba(255,91,91,0)}}
-@keyframes focalNumPop{0%{transform:scale(.96);opacity:.7}60%{transform:scale(1.02);opacity:1}100%{transform:scale(1);opacity:1}}
+/* ── Blanket-discount control: lets users apply one stated-discount %
+     across every matched item (or every item in a category) instead of
+     typing it on every card. Mirrors the side panel's .sp-global. ── */
+.scan-blanket{display:flex;align-items:center;gap:12px;padding:14px 18px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;margin:0 0 18px;flex-wrap:wrap;position:relative}
+[data-theme="light"] .scan-blanket{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.07)}
+.scan-blanket-label{font-size:11px;font-weight:800;text-transform:uppercase;
+  letter-spacing:1.2px;color:var(--text-muted);white-space:nowrap}
+.scan-blanket-input{width:64px;padding:8px 10px;border:1px solid rgba(255,255,255,.15);
+  border-radius:8px;background:rgba(0,0,0,.25);color:var(--text-primary);text-align:center;
+  font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;
+  outline:none;transition:border-color .15s ease,box-shadow .15s ease;
+  -moz-appearance:textfield;appearance:textfield}
+.scan-blanket-input::-webkit-outer-spin-button,.scan-blanket-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.scan-blanket-input:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(194,213,1,.14)}
+[data-theme="light"] .scan-blanket-input{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.12)}
+[data-theme="light"] .scan-blanket-input:focus{border-color:var(--green-brand);box-shadow:0 0 0 3px rgba(24,86,65,.14)}
+.scan-blanket-pct{color:var(--text-muted);font-size:14px;font-weight:700;margin-left:-6px}
+.scan-blanket-spacer{flex:1}
 
-.scan-card-focal-num{position:relative;z-index:1;font-size:clamp(30px,4vw,40px);
-  font-weight:700;line-height:1;letter-spacing:-1.4px;
-  font-family:'Space Grotesk',sans-serif;color:currentColor;
-  text-shadow:0 0 18px currentColor;font-feature-settings:'tnum';margin-top:4px}
-.scan-card-focal.pending .scan-card-focal-num{font-size:clamp(18px,2.6vw,22px);
-  letter-spacing:-.3px;text-shadow:none;font-style:italic;font-weight:600}
+.scan-blanket-applywrap{position:relative;display:inline-block}
+.scan-blanket-apply{padding:9px 18px;border:1px solid rgba(194,213,1,.4);
+  border-radius:8px;background:rgba(194,213,1,.12);color:var(--lime);
+  font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;
+  cursor:pointer;transition:all .18s ease;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:6px;font-family:'Inter',sans-serif}
+.scan-blanket-apply:hover{background:var(--lime);color:var(--bg-deep);border-color:var(--lime);
+  box-shadow:0 4px 16px rgba(194,213,1,.2)}
+.scan-blanket-apply:active{transform:translateY(1px)}
+[data-theme="light"] .scan-blanket-apply{border-color:rgba(24,86,65,.4);
+  background:rgba(24,86,65,.08);color:var(--green-brand)}
+[data-theme="light"] .scan-blanket-apply:hover{background:var(--green-brand);color:#fff;border-color:var(--green-brand);
+  box-shadow:0 4px 16px rgba(24,86,65,.22)}
 
-.scan-card-focal-sublabel{position:relative;z-index:1;font-size:10.5px;font-weight:700;
-  text-transform:uppercase;letter-spacing:1.3px;color:currentColor;opacity:.78;margin-top:1px}
+/* Dropdown menu — anchored to the apply button via absolute positioning */
+.scan-blanket-menu{position:absolute;top:calc(100% + 6px);right:0;min-width:220px;
+  background:rgba(16,20,30,.96);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;
+  box-shadow:0 16px 48px rgba(0,0,0,.5);z-index:55;display:none;padding:4px;
+  animation:menuSlideDown .15s ease;text-transform:none;letter-spacing:0;text-align:left}
+[data-theme="light"] .scan-blanket-menu{background:#fff;border-color:rgba(0,0,0,.1);
+  box-shadow:0 16px 48px rgba(0,0,0,.18)}
+.scan-blanket-menu.show{display:block}
+@keyframes menuSlideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 
-.scan-card-focal-desc{position:relative;z-index:1;font-size:13px;line-height:1.55;
-  color:var(--text-secondary);margin-top:8px;padding-top:12px;
-  border-top:1px solid rgba(255,255,255,.07);font-family:'Inter',system-ui,sans-serif}
-
-/* Supporting stats strip below the focal block */
-.scan-card-substats{display:flex;justify-content:space-between;gap:14px;
-  font-size:11px;color:var(--text-muted);padding:0 2px}
-.scan-card-substats > div{display:flex;flex-direction:column;gap:3px;flex:1}
-.scan-card-substats label{font-size:9.5px;font-weight:700;text-transform:uppercase;
-  letter-spacing:1.1px;color:var(--text-muted)}
-.scan-card-substats .v{font-size:14px;font-weight:700;color:var(--text-primary);
-  font-family:'Space Grotesk',sans-serif;letter-spacing:-.2px;font-feature-settings:'tnum'}
-.scan-card-substats .v.lime{color:var(--lime)}
-.scan-card-substats .v.danger{color:#ff5b5b}
-
-[data-theme="light"] .scan-card-focal.fair{color:var(--green-brand);background:linear-gradient(135deg,rgba(24,86,65,.07),rgba(24,86,65,0));border-color:rgba(24,86,65,.22)}
-/* The dark glow on the focal number is designed for a dark background; on
-   light it reads as a muddy smudge. Drop both shadow and filter on light. */
-[data-theme="light"] .scan-card-focal-num{filter:none;text-shadow:none}
-[data-theme="light"] .scan-card-substats .v.lime{color:var(--green-brand)}
-[data-theme="light"] .scan-card-substats .v.danger{color:#c0392b}
+.scan-blanket-option{padding:10px 12px;font-size:12px;color:var(--text-secondary);
+  cursor:pointer;border-radius:8px;transition:all .15s ease;
+  display:flex;align-items:center;gap:10px;white-space:nowrap;font-weight:600}
+.scan-blanket-option:hover{background:rgba(255,255,255,.07);color:var(--text-primary)}
+[data-theme="light"] .scan-blanket-option{color:var(--text-secondary)}
+[data-theme="light"] .scan-blanket-option:hover{background:rgba(0,0,0,.05);color:var(--text-primary)}
+.scan-blanket-option svg{width:14px;height:14px;color:var(--lime);flex-shrink:0}
+[data-theme="light"] .scan-blanket-option svg{color:var(--green-brand)}
+.scan-blanket-sep{height:1px;background:rgba(255,255,255,.08);margin:4px 0}
+[data-theme="light"] .scan-blanket-sep{background:rgba(0,0,0,.08)}
+.scan-blanket-catlabel{padding:6px 12px 4px;font-size:9.5px;font-weight:800;
+  text-transform:uppercase;letter-spacing:1px;color:var(--text-muted)}
+.scan-blanket-cat{padding:9px 12px;font-size:12px;color:var(--text-secondary);
+  cursor:pointer;border-radius:8px;transition:all .15s ease;white-space:nowrap;
+  font-weight:600;display:flex;align-items:center;gap:10px}
+.scan-blanket-cat svg{width:13px;height:13px;color:var(--text-muted);flex-shrink:0}
+.scan-blanket-cat:hover{background:rgba(194,213,1,.1);color:var(--lime)}
+.scan-blanket-cat:hover svg{color:var(--lime)}
+[data-theme="light"] .scan-blanket-cat:hover{background:rgba(24,86,65,.06);color:var(--green-brand)}
+[data-theme="light"] .scan-blanket-cat:hover svg{color:var(--green-brand)}
 
 /* ── Lead conversion CTA — adaptive copy based on the markup story.
      The whole reason a customer gets to this page is so we can make
@@ -709,7 +755,18 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
    dark forest-green brand color (#185641) anywhere it shows up. */
 [data-theme="light"] .scan-card{background:rgba(255,255,255,.7);border-color:rgba(0,0,0,.06)}
 [data-theme="light"] .scan-card:hover{border-color:rgba(0,0,0,.12);box-shadow:0 12px 32px rgba(0,0,0,.08)}
-[data-theme="light"] .scan-card.verdict-fair{border-left-color:var(--green-brand)}
+/* The light-theme `.scan-card{border-color:rgba(0,0,0,.06)}` shorthand above
+   clobbers the verdict-colored left borders. Restore each one explicitly so
+   every card carries the verdict accent stripe — color matches the "Reality"
+   percentage text on each card for visual continuity. */
+.scan-card.verdict-fair    {border-left-width:3px}
+.scan-card.verdict-mild    {border-left-width:3px}
+.scan-card.verdict-ripoff  {border-left-width:3px}
+.scan-card.verdict-overpay {border-left-width:3px}
+[data-theme="light"] .scan-card.verdict-fair    {border-left-color:var(--green-brand)}
+[data-theme="light"] .scan-card.verdict-mild    {border-left-color:#ffa500}
+[data-theme="light"] .scan-card.verdict-ripoff  {border-left-color:#ff8c00}
+[data-theme="light"] .scan-card.verdict-overpay {border-left-color:#ff4d4d}
 [data-theme="light"] .scan-card-result-val.lime{color:var(--green-brand)}
 [data-theme="light"] .scan-card-verdict.fair{background:rgba(24,86,65,.06);color:var(--green-brand);border-color:rgba(24,86,65,.18)}
 [data-theme="light"] .scan-input{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.12)}
@@ -731,11 +788,6 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .card-match-badge.badge-matched{background:rgba(52,211,153,.1);color:var(--success);border:1px solid rgba(52,211,153,.2)}
 .card-match-badge.badge-unmatched{background:rgba(255,140,0,.08);color:var(--warning);border:1px solid rgba(255,140,0,.15)}
 .scan-result-card.ambiguous{border-left-color:var(--warning)}
-.card-options{margin-top:10px;padding:8px 10px;background:rgba(255,140,0,.06);border:1px solid rgba(255,140,0,.2);border-radius:8px}
-.card-options-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--warning);margin-bottom:6px}
-.card-options-select{width:100%;padding:8px 10px;background:rgba(0,0,0,.35);color:var(--text-primary);border:1px solid rgba(255,255,255,.15);border-radius:6px;font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;outline:none}
-.card-options-select:focus{border-color:rgba(255,140,0,.5);box-shadow:0 0 0 2px rgba(255,140,0,.15)}
-[data-theme="light"] .card-options-select{background:#fff;color:var(--text-primary);border-color:rgba(0,0,0,.15)}
 .scan-notfound{margin-top:14px;padding:12px 14px;background:rgba(255,140,0,.06);border:1px dashed rgba(255,140,0,.25);border-radius:var(--radius);font-size:12px;color:var(--text-secondary);line-height:1.5}
 .scan-notfound-title{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--warning);margin-bottom:6px}
 .scan-notfound-list{font-family:'Inter',system-ui,sans-serif;font-feature-settings:'tnum';font-size:11px;font-weight:500;color:var(--text-muted);word-break:break-all}
@@ -1101,7 +1153,7 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 </div>
 
 <!-- ═══════════════ MOBILE SCAN SCREEN ═══════════════ -->
-<div class="scan-screen" id="scan-screen">
+<div class="scan-screen hidden" id="scan-screen">
   <div class="scan-inner" id="scan-inner">
     <!-- STATE 1: Upload -->
     <div class="scan-upload" id="scan-upload">
@@ -1160,6 +1212,24 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
       </h2>
       <p class="scan-desc" id="scan-results-summary"></p>
       <div class="scan-totals" id="scan-totals" style="display:none"></div>
+      <div class="scan-blanket" id="scan-blanket" style="display:none">
+        <span class="scan-blanket-label">Same discount across all items?</span>
+        <input type="number" class="scan-blanket-input" id="scan-blanket-disc" min="0" max="99" placeholder="0">
+        <span class="scan-blanket-pct">%</span>
+        <span class="scan-blanket-spacer"></span>
+        <div class="scan-blanket-applywrap">
+          <button class="scan-blanket-apply" id="scan-blanket-apply" type="button">
+            Apply &#9662;
+          </button>
+          <div class="scan-blanket-menu" id="scan-blanket-menu">
+            <div class="scan-blanket-option" data-action="all">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              Apply to All Items
+            </div>
+            <div class="scan-blanket-cats-wrap" id="scan-blanket-cats"></div>
+          </div>
+        </div>
+      </div>
       <div class="scan-results-list" id="scan-results-list"></div>
       <div class="scan-cta" id="scan-cta" style="display:none"></div>
       <div class="scan-actions-row">
@@ -2474,6 +2544,12 @@ function renderScanResults() {
   }
   document.getElementById('scan-results-summary').textContent = summary;
 
+  // Show the blanket-discount control whenever there's at least one matched
+  // item to apply to. With more than one item, applying a single discount
+  // across the bunch is a real time-saver.
+  const blanket = document.getElementById('scan-blanket');
+  if (blanket) blanket.style.display = matched.length > 1 ? '' : 'none';
+
   // Cache editable values on each matched scan result so subsequent
   // re-renders (e.g. after a dropdown change) don't lose user edits.
   matched.forEach(r => {
@@ -2493,30 +2569,6 @@ function renderScanResults() {
     const part = esc(r.catalog.part);
     const origIdx = scanResults.indexOf(r);
 
-    // When the same part number maps to multiple catalog entries (e.g. two
-    // products that share a SKU), surface a dropdown so the user picks the
-    // right one instead of us silently grabbing the first.
-    let optionsHtml = '';
-    if (r.ambiguous && Array.isArray(r.matchOptions) && r.matchOptions.length > 1) {
-      const selectedKey = (r.catalog.part || '') + '||' + (r.catalog.desc || '');
-      let optsInner = '';
-      r.matchOptions.forEach((opt, oi) => {
-        const optKey = (opt.part || '') + '||' + (opt.desc || '');
-        const sel = optKey === selectedKey ? ' selected' : '';
-        const descText = opt.desc.length > 70 ? opt.desc.substring(0, 70) + '\u2026' : opt.desc;
-        const vendorText = opt.vendor ? ' \u00b7 ' + opt.vendor : '';
-        const sizeText = opt.size ? ' \u00b7 ' + opt.size : '';
-        const priceText = ' \u2014 ' + fmt(opt.price);
-        optsInner += '<option value="' + oi + '"' + sel + '>' +
-          esc(descText + sizeText + vendorText + priceText) + '</option>';
-      });
-      optionsHtml =
-        '<div class="card-options">' +
-          '<span class="card-options-label">' + r.matchOptions.length + ' catalog matches \u2014 pick the right one</span>' +
-          '<select class="card-options-select" data-scan-options="' + origIdx + '">' + optsInner + '</select>' +
-        '</div>';
-    }
-
     html += '<div class="scan-card verdict-pending" data-scan-idx="' + origIdx + '"' +
       ' style="animation-delay:' + (i * 0.05) + 's">' +
       '<div class="scan-card-header"><div>' +
@@ -2524,8 +2576,6 @@ function renderScanResults() {
         '<div class="scan-card-meta">' + part + ' &middot; ' + esc(r.catalog.size || '') + '</div>' +
         (r.catalog.vendor ? '<span class="scan-card-vendor">' + esc(r.catalog.vendor) + '</span>' : '') +
       '</div></div>' +
-      optionsHtml +
-      '<div data-scan-bar="' + origIdx + '"></div>' +
       '<div class="scan-card-pricegrid">' +
         '<div class="scan-input-cell"><label>Qty</label>' +
           '<input type="number" class="scan-input" data-scan-input="qty" data-idx="' + origIdx + '" min="1" max="9999" value="' + r.calc.qty + '"></div>' +
@@ -2534,8 +2584,15 @@ function renderScanResults() {
         '<div class="scan-input-cell"><label>Stated Disc %</label>' +
           '<input type="number" class="scan-input" data-scan-input="disc" data-idx="' + origIdx + '" min="0" max="99" placeholder="0" value="' + (r.calc.disc > 0 ? r.calc.disc : '') + '"></div>' +
       '</div>' +
-      '<div class="scan-card-focal pending" data-scan-focal="' + origIdx + '"></div>' +
-      '<div class="scan-card-substats" data-scan-substats="' + origIdx + '"></div>' +
+      // Mirrors the .sp-prices grid from the side panel: 2 columns, the
+      // last "Discount Breakdown" row spans full width and renders the
+      // dramatic They Say → Reality comparison.
+      '<div class="sp-prices scan-prices" data-scan-prices="' + origIdx + '">' +
+        '<div class="sp-price-item"><span class="sp-price-label">MSRP</span><span class="sp-price-val" data-scan-msrp></span></div>' +
+        '<div class="sp-price-item"><span class="sp-price-label">Supplier List Price</span><span class="sp-price-val" data-scan-supplist></span></div>' +
+        '<div class="sp-price-item"><span class="sp-price-label">Supplier Markup</span><span class="sp-price-val" data-scan-inflated></span></div>' +
+        '<div class="sp-price-item" style="grid-column:1/-1"><span class="sp-price-label">Discount Breakdown</span><span class="sp-real-disc" style="font-size:12px" data-scan-realdisc></span></div>' +
+      '</div>' +
     '</div>';
   });
 
@@ -2578,21 +2635,6 @@ function renderScanResults() {
     recalcScanTotals();
   });
 
-  // Disambiguation dropdown — picking a different option swaps the
-  // selected catalog row and re-renders. Per-card calc values stay because
-  // we keep them on r.calc rather than reading from the catalog row.
-  list.addEventListener('change', function(e) {
-    const sel = e.target.closest('[data-scan-options]');
-    if (!sel) return;
-    const idx = parseInt(sel.dataset.scanOptions);
-    const optIdx = parseInt(sel.value);
-    const r = scanResults[idx];
-    if (r && Array.isArray(r.matchOptions) && r.matchOptions[optIdx]) {
-      r.catalog = r.matchOptions[optIdx];
-      renderScanResults();
-    }
-  });
-
   // Initial calc fill so cards aren't blank when the page first appears
   matched.forEach(r => recalcScanCard(scanResults.indexOf(r)));
   recalcScanTotals();
@@ -2608,182 +2650,152 @@ function renderScanResults() {
      fair:    gap ≤ 1% and not overpriced
      mild:    everything in between */
 
+/* Mirrors the side-panel's recalcPanelTotals discount-breakdown layout:
+     - 2×2 prices grid (MSRP, Supplier List, Markup, Discount Breakdown)
+     - The breakdown cell renders the dramatic "They say X% → Reality Y%"
+       comparison + colored split bar + verdict line — same DOM that
+       recalcPanelTotals writes into the side panel, so the two views
+       look pixel-identical. */
 function recalcScanCard(idx) {
   const r = scanResults[idx];
   if (!r || !r.matched || !r.calc) return;
   const card    = document.querySelector('[data-scan-idx="' + idx + '"]');
-  const focal   = document.querySelector('[data-scan-focal="' + idx + '"]');
-  const sub     = document.querySelector('[data-scan-substats="' + idx + '"]');
-  const barEl   = document.querySelector('[data-scan-bar="' + idx + '"]');
-  if (!card || !focal || !sub) return;
+  const msrpEl  = card && card.querySelector('[data-scan-msrp]');
+  const supEl   = card && card.querySelector('[data-scan-supplist]');
+  const inflEl  = card && card.querySelector('[data-scan-inflated]');
+  const realEl  = card && card.querySelector('[data-scan-realdisc]');
+  if (!card || !msrpEl || !supEl || !inflEl || !realEl) return;
 
   const msrp     = r.catalog.price;
   const lineMsrp = msrp * r.calc.qty;
-  if (barEl) renderScanCardBar(barEl, r);
+  msrpEl.textContent = fmt(lineMsrp);
 
-  // ── State 1: nothing entered yet — pending hero ──
+  // ── Branch 1: no You Pay yet → all "—" ──────────────────────────────
   if (r.calc.youPay <= 0) {
-    setCardVerdict(card, focal, 'pending', {
-      eyebrow: 'Awaiting your invoice price',
-      bigNum:  'Add what you pay',
-      sublabel: '',
-      desc:    'Enter what you pay per unit to see the gap between MSRP and what your supplier is charging.',
-    });
-    sub.innerHTML =
-      '<div><label>MSRP</label><span class="v">' + fmt(msrp) + '</span></div>' +
-      '<div><label>You Pay</label><span class="v">—</span></div>' +
-      '<div><label>Line Total (MSRP)</label><span class="v">' + fmt(lineMsrp) + '</span></div>';
+    card.className = 'scan-card verdict-pending';
+    supEl.textContent  = '—';  supEl.className  = 'sp-price-val';
+    inflEl.textContent = '—';  inflEl.className = 'sp-price-val';
+    realEl.textContent = '—';  realEl.className = 'sp-price-val';
+    realEl.removeAttribute('style');
+    realEl.style.fontSize = '12px';
     return;
   }
 
-  const lineYouPay = r.calc.youPay * r.calc.qty;
-  const realDisc   = msrp > 0 ? ((msrp - r.calc.youPay) / msrp) * 100 : 0;
+  const realDiscPct = msrp > 0 ? ((msrp - r.calc.youPay) / msrp) * 100 : 0;
+  const ourUnit     = msrp;
+  const item        = r.calc;
 
-  // ── State 2: You Pay only — show real discount as the hero ──
-  if (r.calc.disc <= 0) {
-    const partialClass = realDisc < -0.05 ? 'overpay' : realDisc > 0.05 ? 'fair' : 'mild';
-    let bigNum, sublabel, eyebrow, desc;
-    if (realDisc < -0.05) {
-      bigNum   = '+' + Math.abs(realDisc).toFixed(2) + '%';
-      sublabel = 'Above MSRP';
-      eyebrow  = 'Paying over manufacturer list';
-      desc     = 'You’re paying ' + Math.abs(realDisc).toFixed(1) + '% MORE than the manufacturer’s suggested retail price for this item.';
-    } else if (realDisc > 0.05) {
-      bigNum   = realDisc.toFixed(2) + '%';
-      sublabel = 'Off MSRP';
-      eyebrow  = 'Real discount';
-      desc     = 'You’re paying ' + realDisc.toFixed(1) + '% below MSRP. Add your supplier’s stated discount to see if any of it is hidden markup.';
+  // ── Branch 2: You Pay + Disc both present → full breakdown ─────────
+  if (r.calc.disc > 0) {
+    const actualAbs = Math.abs(realDiscPct);
+    const gap       = item.disc - realDiscPct;
+    const overpay   = realDiscPct < -0.05;
+    const ripoff    = gap > 3;
+    const fair      = gap <= 1 && !overpay;
+
+    // The "fair" verdict uses lime (#c2d501) on dark, but lime on a white
+    // background fails WCAG contrast. On the light theme we swap to the
+    // forest-green brand color (#185641) which has ~7:1 contrast on white.
+    // Same swap for the "MSRP / you pay" segment of the bar so the green
+    // visual identity stays consistent and readable on both themes.
+    const isLight  = document.documentElement.getAttribute('data-theme') === 'light';
+    const fairAccent = isLight ? '#185641' : '#c2d501';
+    const fairGlow   = isLight ? 'rgba(24,86,65,.18)' : 'rgba(194,213,1,.2)';
+    const limeFill   = isLight ? '#185641' : '#c2d501';
+    const limeSwatch = limeFill;
+
+    let accentColor, glowColor, verdictText, verdictIcon, verdictCls;
+    if (overpay) {
+      accentColor = '#ff4d4d'; glowColor = 'rgba(255,77,77,.3)';
+      verdictIcon = '⚠'; verdictText = 'Priced above actual market price';
+      verdictCls = 'verdict-overpay';
+    } else if (ripoff) {
+      accentColor = '#ff8c00'; glowColor = 'rgba(255,140,0,.2)';
+      verdictIcon = '⚠'; verdictText = gap.toFixed(1) + '% of stated discount is inflated list price';
+      verdictCls = 'verdict-ripoff';
+    } else if (fair) {
+      accentColor = fairAccent; glowColor = fairGlow;
+      verdictIcon = '✓'; verdictText = 'Competitively priced — no hidden markup';
+      verdictCls = 'verdict-fair';
     } else {
-      bigNum   = 'At MSRP';
-      sublabel = '';
-      eyebrow  = 'Right at list price';
-      desc     = 'You’re paying exactly the manufacturer’s suggested retail price.';
+      accentColor = '#ffa500'; glowColor = 'rgba(255,165,0,.15)';
+      verdictIcon = '○'; verdictText = 'Slight list price inflation';
+      verdictCls = 'verdict-mild';
     }
-    setCardVerdict(card, focal, partialClass, { eyebrow, bigNum, sublabel, desc });
-    sub.innerHTML =
-      '<div><label>MSRP</label><span class="v">' + fmt(lineMsrp) + '</span></div>' +
-      '<div><label>You Pay</label><span class="v">' + fmt(lineYouPay) + '</span></div>' +
-      '<div><label>Real Discount</label><span class="v ' + (realDisc > 0.05 ? 'lime' : realDisc < -0.05 ? 'danger' : '') + '">' +
-        (realDisc >= 0 ? '' : '-') + Math.abs(realDisc).toFixed(2) + '%</span></div>';
+    card.className = 'scan-card ' + verdictCls;
+
+    const suppListUnit = item.youPay / (1 - item.disc / 100);
+    const barMax       = Math.max(suppListUnit, ourUnit) * 1.05;
+    let stdW           = (ourUnit / barMax) * 100;
+    let markupW        = ((suppListUnit - ourUnit) / barMax) * 100;
+    if (markupW < 0) markupW = 0;
+
+    realEl.style.fontSize = '12px';
+    realEl.innerHTML =
+      '<div class="scan-bdown">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px">' +
+          '<div style="text-align:left">' +
+            '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:2px">They say</div>' +
+            '<div style="font-size:22px;font-weight:800;color:var(--text-primary);line-height:1;font-family:Space Grotesk,sans-serif">' + item.disc + '<span style="font-size:14px">%</span></div>' +
+          '</div>' +
+          '<div style="font-size:20px;color:var(--text-muted);font-weight:300;opacity:.6">→</div>' +
+          '<div style="text-align:right">' +
+            '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:2px">Reality</div>' +
+            '<div style="font-size:22px;font-weight:800;color:' + accentColor + ';line-height:1;text-shadow:0 0 12px ' + glowColor + ';font-family:Space Grotesk,sans-serif">' +
+              (realDiscPct >= 0 ? '' : '-') + (realDiscPct >= 0 ? realDiscPct : actualAbs).toFixed(2) + '<span style="font-size:14px">%</span></div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-bottom:10px">' +
+          '<div class="scan-bdown-bar">' +
+            '<div style="position:absolute;left:0;top:0;height:100%;width:' + stdW + '%;background:' + limeFill + ';border-radius:6px 0 0 6px;transition:width .5s ease"></div>' +
+            '<div style="position:absolute;left:' + stdW + '%;top:0;height:100%;width:' + markupW + '%;background:' + accentColor + ';border-radius:0 6px 6px 0;transition:all .5s ease"></div>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;letter-spacing:.3px">' +
+            '<div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:' + limeSwatch + ';display:inline-block"></span><span style="color:var(--text-muted)">MSRP <b style="color:var(--text-primary)">' + fmt(ourUnit) + '</b></span></div>' +
+            '<div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:' + accentColor + ';display:inline-block"></span><span style="color:var(--text-muted)">Markup <b style="color:' + accentColor + '">' + fmt(suppListUnit - ourUnit) + '</b></span></div>' +
+            '<div style="color:var(--text-muted)">List <b style="color:var(--text-primary)">' + fmt(suppListUnit) + '</b></div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="text-align:center;font-size:12px;font-weight:600;color:' + accentColor + ';letter-spacing:.3px">' +
+          verdictIcon + ' ' + verdictText +
+        '</div>' +
+      '</div>';
+    realEl.className = 'sp-real-disc';
+
+    const suppListLine = suppListUnit * item.qty;
+    const markup       = suppListUnit - ourUnit;
+    const markupPct    = ourUnit > 0 ? (markup / ourUnit) * 100 : 0;
+    supEl.textContent = fmt(suppListLine);
+    if (markup > 0.005) {
+      inflEl.textContent = 'They added ' + markupPct.toFixed(1) + '%';
+      inflEl.className = 'sp-savings-val sp-savings-negative';
+    } else if (markup < -0.005) {
+      inflEl.textContent = Math.abs(markupPct).toFixed(1) + '% below';
+      inflEl.className = 'sp-savings-val';
+    } else {
+      inflEl.textContent = 'No markup';
+      inflEl.className = 'sp-price-val';
+    }
     return;
   }
 
-  // ── State 3: full data — markup analysis hero ──
-  const suppListUnit = r.calc.youPay / (1 - r.calc.disc / 100);
-  const suppListLine = suppListUnit * r.calc.qty;
-  const markupLine   = (suppListUnit - msrp) * r.calc.qty;
-  const markupPct    = msrp > 0 ? ((suppListUnit - msrp) / msrp) * 100 : 0;
-  const gap          = r.calc.disc - realDisc;
-
-  let verdictClass, eyebrow, bigNum, sublabel, desc;
-  if (realDisc < -0.05) {
-    verdictClass = 'overpay'; eyebrow = 'Paying above MSRP';
-    bigNum   = '+' + Math.abs(realDisc).toFixed(1) + '%';
-    sublabel = 'Above manufacturer MSRP';
-    desc     = 'Your supplier is charging more than the manufacturer’s list price. The ' + r.calc.disc + '% discount they quoted is misleading — there’s no real discount happening.';
-  } else if (gap > 3) {
-    verdictClass = 'ripoff'; eyebrow = 'Inflated list price';
-    bigNum   = '+' + markupPct.toFixed(1) + '%';
-    sublabel = 'Hidden markup over MSRP';
-    desc     = 'Stated ' + r.calc.disc + '% off, but the real discount off MSRP is only ' + realDisc.toFixed(1) + '%. The difference is supplier margin baked into an inflated list price.';
-  } else if (gap <= 1) {
-    verdictClass = 'fair'; eyebrow = 'Competitively priced';
-    bigNum   = realDisc.toFixed(1) + '%';
-    sublabel = 'Real discount off MSRP';
-    desc     = 'Your supplier’s stated discount lines up with the real discount off MSRP. No hidden markup — this is honest pricing.';
+  // ── Branch 3: You Pay only, no Disc → real-discount summary ────────
+  card.className = 'scan-card verdict-pending';
+  realEl.style.fontSize = '14px';
+  if (realDiscPct > 0.05) {
+    realEl.textContent = realDiscPct.toFixed(2) + '% off MSRP';
+    realEl.className = 'sp-savings-val';
+  } else if (realDiscPct < -0.05) {
+    realEl.textContent = '+' + Math.abs(realDiscPct).toFixed(2) + '% above MSRP';
+    realEl.className = 'sp-savings-val sp-savings-negative';
   } else {
-    verdictClass = 'mild'; eyebrow = 'Mild markup';
-    bigNum   = '+' + markupPct.toFixed(1) + '%';
-    sublabel = 'Hidden markup over MSRP';
-    desc     = 'Stated ' + r.calc.disc + '% vs. real ' + realDisc.toFixed(1) + '%. A small portion of the discount is inflated list price — worth pushing back on.';
+    realEl.textContent = 'Same price';
+    realEl.className = 'sp-price-val';
   }
-
-  setCardVerdict(card, focal, verdictClass, { eyebrow, bigNum, sublabel, desc });
-
-  const markupCls = markupLine > 0.005 ? 'danger' : markupLine < -0.005 ? 'lime' : '';
-  sub.innerHTML =
-    '<div><label>MSRP</label><span class="v">' + fmt(lineMsrp) + '</span></div>' +
-    '<div><label>Supplier List</label><span class="v">' + fmt(suppListLine) + '</span></div>' +
-    '<div><label>Hidden Markup</label><span class="v ' + markupCls + '">' +
-      (markupLine >= 0 ? '+' : '-') + fmt(Math.abs(markupLine)) + '</span></div>';
-}
-
-/* Renders the focal block on a card, sets the card's verdict class, and
-   animates the big number on each value change so the user feels the
-   markup story update as they type. */
-function setCardVerdict(card, focal, cls, parts) {
-  card.className = 'scan-card verdict-' + cls;
-  focal.className = 'scan-card-focal ' + cls;
-  focal.innerHTML =
-    '<span class="scan-card-focal-eyebrow"><span class="dot"></span>' + esc(parts.eyebrow) + '</span>' +
-    '<span class="scan-card-focal-num" data-focal-num>' + esc(parts.bigNum) + '</span>' +
-    (parts.sublabel ? '<span class="scan-card-focal-sublabel">' + esc(parts.sublabel) + '</span>' : '') +
-    (parts.desc ? '<div class="scan-card-focal-desc">' + esc(parts.desc) + '</div>' : '');
-  // Subtle pop animation on the focal number whenever it re-renders so the
-  // value feels "alive" as the user adjusts inputs.
-  const num = focal.querySelector('[data-focal-num]');
-  if (num) {
-    num.style.animation = 'none';
-    // Force reflow to restart the keyframes
-    void num.offsetWidth;
-    num.style.animation = 'focalNumPop .35s cubic-bezier(.2,1.4,.4,1)';
-  }
-}
-
-/* Mini bar visualization on each card. Communicates the markup story
-   at-a-glance, before the user reads any numbers:
-     - lime segment   = what you actually pay
-     - grey segment   = the MSRP they SHOULD be charging (a real discount)
-     - red segment    = the supplier's hidden markup above MSRP
-   The relative widths animate via CSS transitions so adjustments to the
-   You Pay / Disc inputs feel responsive. */
-function renderScanCardBar(el, r) {
-  if (!r || !r.matched || !r.calc) return;
-  const msrp = r.catalog.price;
-  if (msrp <= 0) { el.innerHTML = ''; return; }
-
-  // Pending — show a hint bar so the area isn't empty.
-  if (r.calc.youPay <= 0) {
-    el.innerHTML =
-      '<div class="scan-card-bar"><div class="scan-card-bar-seg gap" style="width:100%"></div></div>' +
-      '<div class="scan-card-bar-legend"><span>Add what you pay to see the gap</span><span>MSRP ' + fmt(msrp) + '</span></div>';
-    return;
-  }
-
-  // No discount entered — comparison is just You Pay vs MSRP.
-  if (r.calc.disc <= 0) {
-    const youW   = Math.min(100, (r.calc.youPay / msrp) * 100);
-    const gapW   = Math.max(0, 100 - youW);
-    el.innerHTML =
-      '<div class="scan-card-bar">' +
-        '<div class="scan-card-bar-seg you" style="width:' + youW.toFixed(2) + '%"></div>' +
-        '<div class="scan-card-bar-seg gap" style="width:' + gapW.toFixed(2) + '%"></div>' +
-      '</div>' +
-      '<div class="scan-card-bar-legend"><span>You pay ' + fmt(r.calc.youPay) + '</span><span>MSRP ' + fmt(msrp) + '</span></div>';
-    return;
-  }
-
-  // Full state — derive supplier list and show a three-segment bar.
-  const suppList = r.calc.youPay / (1 - r.calc.disc / 100);
-  const ceiling  = Math.max(suppList, msrp) * 1.05;
-  const youW     = Math.min(100, (r.calc.youPay / ceiling) * 100);
-  let gapW       = Math.max(0, ((msrp - r.calc.youPay) / ceiling) * 100);
-  let markupW    = Math.max(0, ((suppList - msrp) / ceiling) * 100);
-  if (markupW + gapW + youW > 100) {
-    // Clamp to 100% to avoid overflow at edge cases (shouldn't happen)
-    const k = 100 / (markupW + gapW + youW);
-    markupW *= k; gapW *= k;
-  }
-  el.innerHTML =
-    '<div class="scan-card-bar">' +
-      '<div class="scan-card-bar-seg you" style="width:' + youW.toFixed(2) + '%"></div>' +
-      '<div class="scan-card-bar-seg gap" style="width:' + gapW.toFixed(2) + '%"></div>' +
-      '<div class="scan-card-bar-seg markup" style="width:' + markupW.toFixed(2) + '%"></div>' +
-    '</div>' +
-    '<div class="scan-card-bar-legend">' +
-      '<span>You pay ' + fmt(r.calc.youPay) + '</span>' +
-      '<span>Supplier list ' + fmt(suppList) + '</span>' +
-    '</div>';
+  supEl.textContent = 'Enter discount';
+  supEl.className   = 'sp-price-val';
+  inflEl.textContent = '—';
+  inflEl.className   = 'sp-price-val';
 }
 
 function recalcScanTotals() {
@@ -2815,50 +2827,158 @@ function recalcScanTotals() {
   const isFair          = !isAlarm && hasInput && markupTotal >= -0.5;
 
   // Reset state classes so the banner picks the right palette this render.
+  // Also detect a transition INTO the alarm state so we can fire the one-shot
+  // .alarm-enter animation (pop + red flash + shake) for emphasis. Skipped on
+  // the very first render so it doesn't double up with scanBannerRise — the
+  // dataset is unset on first call, so previousState will be undefined.
+  const previousState = banner.dataset.alarmState;
+  const newState = isAlarm ? 'alarm' : (isFair ? 'fair' : 'neutral');
+  const justBecameAlarm = previousState !== undefined && previousState !== 'alarm' && newState === 'alarm';
+
   banner.className = 'scan-totals' + (isAlarm ? ' alarm' : '') + (isFair ? ' fair' : '');
+  banner.dataset.alarmState = newState;
   banner.style.display = '';
 
-  // ── Status pill + bold one-line title with glowing accent number. Punchy,
-  //    sales-oriented copy that drives the conversion message. ──
-  let eyebrowText, titleHtml, ctaLabel;
+  if (justBecameAlarm) {
+    // Force a reflow so the browser registers the className change before we
+    // add .alarm-enter — otherwise restarting the animation can be skipped.
+    void banner.offsetWidth;
+    banner.classList.add('alarm-enter');
+    // Remove the class after the entrance animation completes, so the next
+    // alarm transition can re-trigger it. Use a one-shot listener keyed on
+    // the specific animation name to avoid reacting to scanBannerRise/Pulse.
+    const onEnd = function(e) {
+      if (e.animationName === 'paAlarmEnter') {
+        banner.classList.remove('alarm-enter');
+        banner.removeEventListener('animationend', onEnd);
+      }
+    };
+    banner.addEventListener('animationend', onEnd);
+  }
+
+  // ── Bold one-line title with a glowing accent number, plus the CTA label.
+  //    Punchy, sales-oriented copy that drives the conversion message. ──
+  let titleHtml, ctaLabel;
   if (!hasInput) {
-    eyebrowText = '● Catalog tracked';
     titleHtml = '<span class="pa-headline-accent">' + esc(fmt(msrpTotal)) + '</span> in MSRP across ' + matched.length + ' items — add prices to expose markup.';
     ctaLabel  = 'Get a Quote';
   } else if (isAlarm) {
-    eyebrowText = '⚠ Hidden markup detected';
     titleHtml = 'Your supplier hid <span class="pa-headline-accent">' + esc('+' + fmt(markupTotal)) + '</span> in markup above MSRP.';
     ctaLabel  = 'Stop Overpaying →';
   } else if (markupTotal < -0.5) {
-    eyebrowText = '✓ Below MSRP — clean pricing';
     titleHtml = 'You\'re paying <span class="pa-headline-accent">' + realOverallDisc.toFixed(1) + '%</span> below MSRP — no hidden markup.';
     ctaLabel  = 'Get a Comparison Quote →';
   } else {
-    eyebrowText = hasDisc ? '✓ No hidden markup' : '✓ Real savings detected';
     titleHtml = 'You\'re saving <span class="pa-headline-accent">' + realOverallDisc.toFixed(1) + '%</span> off manufacturer MSRP.';
     ctaLabel  = 'Get a Quote →';
   }
 
-  // Hidden Markup tile — the headline finding, always emphasized
-  let markupTileVal, markupTileClass;
-  if (!hasDisc) {
-    markupTileVal   = 'Add disc %';
-    markupTileClass = 'pa-stat-pending';
-  } else if (Math.abs(markupTotal) <= 0.5) {
-    markupTileVal   = 'None';
-    markupTileClass = 'pa-stat-clean';
-  } else if (markupTotal > 0) {
-    markupTileVal   = '+' + fmt(markupTotal);
-    markupTileClass = 'pa-stat-danger';
+  // ── Aggregate "They Say → Reality" breakdown.
+  //    weightedStated = effective stated discount derived from supplier list
+  //    vs. you-pay totals across all matched items. Same math as a single
+  //    card, just operating on the sums.
+  const weightedStated = suppListTotal > 0 ? ((suppListTotal - youPayTotal) / suppListTotal) * 100 : 0;
+  const realDiscPct    = realOverallDisc;
+  const gap            = weightedStated - realDiscPct;
+  const overpay        = realDiscPct < -0.05;
+  const ripoff         = gap > 3;
+  const fairBdown      = gap <= 1 && !overpay;
+
+  // Theme-aware lime swap — forest-green on light theme so text + bar fill
+  // stay readable on white backgrounds.
+  const isLight    = document.documentElement.getAttribute('data-theme') === 'light';
+  const fairAccent = isLight ? '#185641' : '#c2d501';
+  const fairGlow   = isLight ? 'rgba(24,86,65,.18)' : 'rgba(194,213,1,.2)';
+  const limeFill   = isLight ? '#185641' : '#c2d501';
+
+  let bdownAccent, bdownGlow, bdownText, bdownIcon;
+  if (overpay) {
+    bdownAccent = '#ff4d4d'; bdownGlow = 'rgba(255,77,77,.3)';
+    bdownIcon = '⚠'; bdownText = 'Overall priced above MSRP';
+  } else if (ripoff) {
+    bdownAccent = '#ff8c00'; bdownGlow = 'rgba(255,140,0,.2)';
+    bdownIcon = '⚠'; bdownText = gap.toFixed(1) + '% of stated discount is inflated list price';
+  } else if (fairBdown) {
+    bdownAccent = fairAccent; bdownGlow = fairGlow;
+    bdownIcon = '✓'; bdownText = 'Competitively priced overall — no hidden markup';
   } else {
-    markupTileVal   = '−' + fmt(Math.abs(markupTotal));
-    markupTileClass = 'pa-stat-accent';
+    bdownAccent = '#ffa500'; bdownGlow = 'rgba(255,165,0,.15)';
+    bdownIcon = '○'; bdownText = 'Slight overall list-price inflation';
   }
 
-  const realDiscIsPositive = realOverallDisc > 0.05;
-  const realDiscDisplay    = hasInput
-    ? (realOverallDisc >= 0 ? '' : '-') + Math.abs(realOverallDisc).toFixed(1) + '%'
-    : '—';
+  // Render the breakdown HTML based on input completeness.
+  let breakdownHtml = '';
+  if (!hasInput) {
+    // Pending — show MSRP total in a centered placeholder so the box isn't empty.
+    breakdownHtml =
+      '<div class="scan-bdown" style="text-align:center;padding:20px 16px">' +
+        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.4px;font-weight:800;color:var(--text-secondary);margin-bottom:6px">MSRP Total Across ' + matched.length + ' Matched Items</div>' +
+        '<div style="font-size:32px;font-weight:800;font-family:Space Grotesk,sans-serif;color:var(--text-primary);line-height:1;letter-spacing:-1px">' + esc(fmt(msrpTotal)) + '</div>' +
+        '<div style="font-size:13px;color:var(--text-muted);margin-top:12px;line-height:1.5">Add what you pay on each card below to expose the markup story.</div>' +
+      '</div>';
+  } else if (!hasDisc) {
+    // Some You Pay values entered but no stated discount on any item — show
+    // the MSRP-vs-you-pay comparison without the They Say / Reality dramatic.
+    const youW = msrpTotal > 0 ? Math.min(100, (youPayTotal / msrpTotal) * 100) : 0;
+    const realDispCls = realDiscPct > 0.05 ? limeFill : realDiscPct < -0.05 ? '#ff5b5b' : 'var(--text-muted)';
+    const realLabel   = realDiscPct > 0.05
+      ? '✓ Saving ' + realDiscPct.toFixed(2) + '% off MSRP overall'
+      : realDiscPct < -0.05
+        ? '⚠ Paying ' + Math.abs(realDiscPct).toFixed(2) + '% above MSRP overall'
+        : 'At MSRP overall';
+    breakdownHtml =
+      '<div class="scan-bdown">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px">' +
+          '<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:2px">You Pay</div>' +
+          '<div style="font-size:22px;font-weight:800;color:var(--text-primary);line-height:1;font-family:Space Grotesk,sans-serif">' + esc(fmt(youPayTotal)) + '</div></div>' +
+          '<div style="font-size:20px;color:var(--text-muted);font-weight:300;opacity:.6">vs</div>' +
+          '<div style="text-align:right"><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:2px">MSRP</div>' +
+          '<div style="font-size:22px;font-weight:800;color:var(--text-primary);line-height:1;font-family:Space Grotesk,sans-serif">' + esc(fmt(msrpTotal)) + '</div></div>' +
+        '</div>' +
+        '<div class="scan-bdown-bar">' +
+          '<div style="position:absolute;left:0;top:0;height:100%;width:' + youW + '%;background:' + limeFill + ';border-radius:6px;transition:width .5s ease"></div>' +
+        '</div>' +
+        '<div style="text-align:center;font-size:13px;font-weight:700;color:' + realDispCls + ';margin-top:10px;letter-spacing:.3px">' +
+          esc(realLabel) +
+        '</div>' +
+        '<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:6px">Add stated discount on each card to see the hidden-markup story.</div>' +
+      '</div>';
+  } else {
+    // Full breakdown — mirrors recalcScanCard's branch 2 visual exactly.
+    const barMax = Math.max(suppListTotal, msrpTotal) * 1.05;
+    let stdW    = (msrpTotal / barMax) * 100;
+    let markupW = ((suppListTotal - msrpTotal) / barMax) * 100;
+    if (markupW < 0) markupW = 0;
+    breakdownHtml =
+      '<div class="scan-bdown">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px">' +
+          '<div style="text-align:left">' +
+            '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:2px">They say</div>' +
+            '<div style="font-size:24px;font-weight:800;color:var(--text-primary);line-height:1;font-family:Space Grotesk,sans-serif">' + weightedStated.toFixed(2) + '<span style="font-size:15px">%</span></div>' +
+          '</div>' +
+          '<div style="font-size:20px;color:var(--text-muted);font-weight:300;opacity:.6">→</div>' +
+          '<div style="text-align:right">' +
+            '<div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:2px">Reality</div>' +
+            '<div style="font-size:24px;font-weight:800;color:' + bdownAccent + ';line-height:1;text-shadow:0 0 12px ' + bdownGlow + ';font-family:Space Grotesk,sans-serif">' +
+              (realDiscPct >= 0 ? '' : '-') + Math.abs(realDiscPct).toFixed(2) + '<span style="font-size:15px">%</span></div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-bottom:10px">' +
+          '<div class="scan-bdown-bar">' +
+            '<div style="position:absolute;left:0;top:0;height:100%;width:' + stdW + '%;background:' + limeFill + ';border-radius:6px 0 0 6px;transition:width .5s ease"></div>' +
+            '<div style="position:absolute;left:' + stdW + '%;top:0;height:100%;width:' + markupW + '%;background:' + bdownAccent + ';border-radius:0 6px 6px 0;transition:all .5s ease"></div>' +
+          '</div>' +
+          '<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;letter-spacing:.3px">' +
+            '<div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:' + limeFill + ';display:inline-block"></span><span style="color:var(--text-muted)">MSRP <b style="color:var(--text-primary)">' + esc(fmt(msrpTotal)) + '</b></span></div>' +
+            '<div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:' + bdownAccent + ';display:inline-block"></span><span style="color:var(--text-muted)">Markup <b style="color:' + bdownAccent + '">' + esc(fmt(suppListTotal - msrpTotal)) + '</b></span></div>' +
+            '<div style="color:var(--text-muted)">List <b style="color:var(--text-primary)">' + esc(fmt(suppListTotal)) + '</b></div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="text-align:center;font-size:13px;font-weight:700;color:' + bdownAccent + ';letter-spacing:.3px">' +
+          bdownIcon + ' ' + esc(bdownText) +
+        '</div>' +
+      '</div>';
+  }
 
   const ctaArrowSvg =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' +
@@ -2868,27 +2988,13 @@ function recalcScanTotals() {
   banner.innerHTML =
     '<div class="pa-bar-top">' +
       '<div class="pa-bar-lead">' +
-        '<div class="pa-eyebrow"><span class="dot"></span><span>' + esc(eyebrowText) + '</span></div>' +
         '<div class="pa-bar-title">' + titleHtml + '</div>' +
       '</div>' +
       '<a class="pa-bar-cta" href="https://industrialfinishes.com/quick-quote/" target="_blank" rel="noopener">' +
         ctaArrowSvg + esc(ctaLabel) +
       '</a>' +
     '</div>' +
-    '<div class="pa-bar-stats">' +
-      '<div class="pa-stat"><span class="pa-stat-label">MSRP Total</span>' +
-        '<span class="pa-stat-val">' + esc(fmt(msrpTotal)) + '</span></div>' +
-      '<div class="pa-stat"><span class="pa-stat-label">You Pay</span>' +
-        '<span class="pa-stat-val">' + (hasInput ? esc(fmt(youPayTotal)) : '—') + '</span></div>' +
-      '<div class="pa-stat pa-stat-headline ' +
-        (hasInput && realOverallDisc > 0.05 ? 'pa-stat-accent' :
-         hasInput && realOverallDisc < -0.05 ? 'pa-stat-danger' : '') + '">' +
-        '<span class="pa-stat-label">Real Discount</span>' +
-        '<span class="pa-stat-val">' + esc(realDiscDisplay) + '</span></div>' +
-      '<div class="pa-stat pa-stat-headline ' + markupTileClass + '">' +
-        '<span class="pa-stat-label">Hidden Markup</span>' +
-        '<span class="pa-stat-val">' + esc(markupTileVal) + '</span></div>' +
-    '</div>';
+    breakdownHtml;
 
   if (cta) renderScanCta(cta, { isAlarm, isFair, hasInput, markupTotal, msrpTotal, matched });
 }
@@ -3095,6 +3201,86 @@ function initScanScreen() {
     }
     document.getElementById('sp-export').click();
   });
+
+  // ── Blanket discount apply: lets the user push a single stated-discount %
+  //    across every matched scan result (or every item in a category) without
+  //    typing it on every card. Mirrors the side panel's apply-menu logic. ──
+  const blanketBtn   = document.getElementById('scan-blanket-apply');
+  const blanketMenu  = document.getElementById('scan-blanket-menu');
+  const blanketCats  = document.getElementById('scan-blanket-cats');
+  const blanketInput = document.getElementById('scan-blanket-disc');
+
+  if (blanketBtn && blanketMenu) {
+    blanketBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const val = parseInt(blanketInput.value) || 0;
+      if (val === 0) return;
+      // Build the category list from the matched scan results so the menu
+      // only lists categories actually present in this scan.
+      const cats = {};
+      scanResults.forEach(r => {
+        if (!r.matched || !r.catalog) return;
+        const cat = r.catalog.category || 'OTHER';
+        const catName = r.catalog.catName || (META && META.categories && META.categories[cat]) || cat;
+        cats[cat] = catName;
+      });
+      const catKeys = Object.keys(cats).sort((a, b) => (cats[a]).localeCompare(cats[b]));
+      let catHtml = '';
+      if (catKeys.length > 1) {
+        // Only render the "by category" section when there's more than one
+        // category to choose from (otherwise "Apply to All" already covers it).
+        catHtml = '<div class="scan-blanket-sep"></div>' +
+          '<div class="scan-blanket-catlabel">Or apply to one category:</div>';
+        catKeys.forEach(k => {
+          catHtml +=
+            '<div class="scan-blanket-cat" data-cat="' + esc(k) + '">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>' +
+              esc(cats[k]) +
+            '</div>';
+        });
+      }
+      blanketCats.innerHTML = catHtml;
+      blanketMenu.classList.toggle('show');
+    });
+
+    blanketMenu.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const val = Math.min(99, Math.max(0, parseInt(blanketInput.value) || 0));
+      if (val === 0) return;
+      const option    = e.target.closest('.scan-blanket-option');
+      const catOption = e.target.closest('.scan-blanket-cat');
+      if (option && option.dataset.action === 'all') {
+        scanResults.forEach(r => { if (r.matched && r.calc) r.calc.disc = val; });
+      } else if (catOption) {
+        const cat = catOption.dataset.cat;
+        scanResults.forEach(r => {
+          if (r.matched && r.calc && (r.catalog.category || 'OTHER') === cat) r.calc.disc = val;
+        });
+      } else {
+        // Click landed on the menu chrome but not an actionable target
+        // (separator, label) — keep the menu open, do nothing.
+        return;
+      }
+      blanketMenu.classList.remove('show');
+      // Sync to selected[] so CSV export + side panel stay consistent, then
+      // re-render per-card calc + the totals breakdown.
+      syncScanResultsToSelected();
+      scanResults.forEach((r, i) => { if (r.matched && r.calc) recalcScanCard(i); });
+      recalcScanTotals();
+      // Update each card's disc input so the user sees the value they applied
+      // (we mutated r.calc.disc, not the DOM inputs).
+      document.querySelectorAll('[data-scan-input="disc"]').forEach(inp => {
+        const idx = parseInt(inp.dataset.idx);
+        if (scanResults[idx] && scanResults[idx].calc) {
+          inp.value = scanResults[idx].calc.disc > 0 ? scanResults[idx].calc.disc : '';
+        }
+      });
+    });
+
+    // Close the menu on any document click that isn't on the button.
+    // Menu's stopPropagation prevents this from firing for menu-internal clicks.
+    document.addEventListener('click', function() { blanketMenu.classList.remove('show'); });
+  }
 
   // Desktop toolbar button — opens file picker directly, no overlay
   var desktopFileInput = document.getElementById('scan-desktop-file');

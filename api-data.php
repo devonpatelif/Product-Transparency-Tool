@@ -20,6 +20,10 @@
 // 256 MB gives comfortable headroom; the cache hit path stays cheap.
 ini_set('memory_limit', '256M');
 
+define('IFS_INTERNAL', true);
+require __DIR__ . '/_ratelimit.php';
+require __DIR__ . '/_check_origin.php';
+
 // ─── Configuration ───────────────────────────────────────────
 $jsonFile      = __DIR__ . '/IVData.json';
 $cacheFile     = __DIR__ . '/.cache/IVData.normalized.php';
@@ -39,29 +43,11 @@ header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 // ─── Origin / Referer Check (production only) ───────────────
-if ($isProd) {
-    $origin  = isset($_SERVER['HTTP_ORIGIN'])  ? $_SERVER['HTTP_ORIGIN']  : '';
-    $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-
-    $originAllowed  = !empty($origin)  && stripos($origin,  $allowedHost) !== false;
-    $refererAllowed = !empty($referer) && stripos($referer, $allowedHost) !== false;
-    $sameOrigin     = empty($origin) && !empty($referer) && stripos($referer, $allowedHost) !== false;
-
-    if (!$originAllowed && !$refererAllowed && !$sameOrigin) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied.']);
-        exit;
-    }
-}
+if ($isProd) enforceOrigin($allowedHost);
 
 // ─── Rate limit ─────────────────────────────────────────────
 $clientIp = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
-if (!checkRateLimit($clientIp, $rateLimitDir, $rateWindow, $rateMax)) {
-    http_response_code(429);
-    header('Retry-After: ' . $rateWindow);
-    echo json_encode(['error' => 'Too many requests. Please slow down.']);
-    exit;
-}
+enforceRateLimit($clientIp, $rateLimitDir, $rateWindow, $rateMax, 'data');
 
 // ─── Load (cached) normalized catalog ───────────────────────
 $catalog = loadCatalog($jsonFile, $cacheFile);
@@ -93,56 +79,6 @@ exit;
 // ────────────────────────────────────────────────────────────
 
 /**
- * Per-IP sliding-window rate limit. File-backed so it survives request
- * boundaries on shared hosting. Fails open if the directory isn't writable.
- */
-function checkRateLimit($ip, $dir, $window, $max) {
-    if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
-        // Defense-in-depth: deny direct web access to the rate-limit files
-        @file_put_contents($dir . '/.htaccess', "Require all denied\nDeny from all\n");
-    }
-    // Note: deliberately not calling is_writable() — it gives false negatives
-    // on Windows even when the directory is writable. The actual write below
-    // will fail gracefully if the dir really isn't writable.
-    if (!is_dir($dir)) return true;
-
-    $file     = $dir . '/' . sha1($ip);
-    $lockFile = $file . '.lock';
-    $now      = time();
-    $cutoff   = $now - $window;
-
-    // Use a separate lock file so the data file can be read/written via
-    // file_get_contents/file_put_contents (more reliable on Windows than
-    // the fopen('c+')+ftruncate+fwrite dance).
-    $lockFp = @fopen($lockFile, 'c');
-    if (!$lockFp) return true;
-    if (!flock($lockFp, LOCK_EX)) { fclose($lockFp); return true; }
-
-    $contents = file_exists($file) ? @file_get_contents($file) : '';
-    $kept = [];
-    if (is_string($contents) && $contents !== '') {
-        foreach (explode("\n", $contents) as $line) {
-            $t = (int) trim($line);
-            if ($t > $cutoff) $kept[] = $t;
-        }
-    }
-
-    if (count($kept) >= $max) {
-        flock($lockFp, LOCK_UN);
-        fclose($lockFp);
-        return false;
-    }
-
-    $kept[] = $now;
-    @file_put_contents($file, implode("\n", $kept));
-
-    flock($lockFp, LOCK_UN);
-    fclose($lockFp);
-    return true;
-}
-
-/**
  * Load the catalog as a normalized array of rows. Caches the parsed +
  * normalized version to a PHP file so opcache can serve subsequent
  * requests without re-parsing the 8 MB JSON. Falls back to APCu if
@@ -164,7 +100,10 @@ function loadCatalog($jsonFile, $cacheFile) {
     if (file_exists($cacheFile) && filemtime($cacheFile) >= $sourceMtime) {
         $blob = @file_get_contents($cacheFile);
         if ($blob !== false) {
-            $cached = @unserialize($blob);
+            // allowed_classes => false: refuse to instantiate any objects.
+            // Cache holds plain arrays only, so loss-free. Closes PHP-object-
+            // injection RCE if .cache/ ever becomes attacker-writable.
+            $cached = @unserialize($blob, ['allowed_classes' => false]);
             if (is_array($cached)) {
                 if (function_exists('apcu_store')) {
                     apcu_store('ifs_catalog_v1', ['mtime' => $sourceMtime, 'data' => $cached], 3600);

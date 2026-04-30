@@ -11,6 +11,10 @@
 $localConf = __DIR__ . '/config.local.php';
 if (file_exists($localConf)) require_once $localConf;
 
+define('IFS_INTERNAL', true);
+require __DIR__ . '/_ratelimit.php';
+require __DIR__ . '/_check_origin.php';
+
 // ─── Configuration ───────────────────────────────────────────
 $allowedHost = 'industrialfinishes.com';
 $apiKey      = getenv('ANTHROPIC_API_KEY');
@@ -20,6 +24,13 @@ $apiKey      = getenv('ANTHROPIC_API_KEY');
 $model       = 'claude-haiku-4-5-20251001';
 $maxTokens   = 4096;
 $maxFileSize = 10 * 1024 * 1024; // 10 MB
+
+// Rate limit: each call costs real money at the upstream Claude API,
+// so we cap much tighter than /api-data.php. A legit user uploads
+// 1–3 photos per visit; 10/min covers retries on bad images comfortably.
+$rateLimitDir = __DIR__ . '/.ratelimit';
+$rateWindow   = 60;
+$rateMax      = 10;
 
 // Detect production vs local development
 $serverHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
@@ -31,20 +42,13 @@ header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 // ─── Origin / Referer Check (production only) ───────────────
-if ($isProd) {
-    $origin  = isset($_SERVER['HTTP_ORIGIN'])  ? $_SERVER['HTTP_ORIGIN']  : '';
-    $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+if ($isProd) enforceOrigin($allowedHost);
 
-    $originAllowed  = !empty($origin)  && stripos($origin, $allowedHost) !== false;
-    $refererAllowed = !empty($referer) && stripos($referer, $allowedHost) !== false;
-    $sameOrigin     = empty($origin) && !empty($referer) && stripos($referer, $allowedHost) !== false;
-
-    if (!$originAllowed && !$refererAllowed && !$sameOrigin) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied.']);
-        exit;
-    }
-}
+// ─── Rate limit ─────────────────────────────────────────────
+// Separate bucket from /api-data.php so a busy catalog session
+// doesn't burn the (much smaller) Vision-API budget.
+$clientIp = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+enforceRateLimit($clientIp, $rateLimitDir, $rateWindow, $rateMax, 'analyze');
 
 // ─── Validate Request ───────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
