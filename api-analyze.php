@@ -8,7 +8,12 @@
  */
 
 // ─── Load local config if present (gitignored) ─────────────
-$localConf = __DIR__ . '/config.local.php';
+// Prefer parent dir (outside web root); fall back to legacy in-project path.
+// Files outside the web root cannot be served as plain text if PHP processing
+// breaks (e.g. Apache misconfig), keeping ANTHROPIC_API_KEY off the wire.
+$localConf = file_exists(dirname(__DIR__) . '/config.local.php')
+    ? dirname(__DIR__) . '/config.local.php'
+    : __DIR__ . '/config.local.php';
 if (file_exists($localConf)) require_once $localConf;
 
 define('IFS_INTERNAL', true);
@@ -18,10 +23,11 @@ require __DIR__ . '/_check_origin.php';
 // ─── Configuration ───────────────────────────────────────────
 $allowedHost = 'industrialfinishes.com';
 $apiKey      = getenv('ANTHROPIC_API_KEY');
-// Haiku 4.5 — vision-capable, cheap, fast. Good fit for invoice OCR where
-// cost scales linearly with visitor count and accuracy is bounded by the
-// quality of the photo, not the model.
-$model       = 'claude-haiku-4-5-20251001';
+// Sonnet 4.6 — chosen over Haiku 4.5 for accuracy on non-standard invoice
+// layouts (brand-logo columns, mixed QTY formats like "20%" / "24 in",
+// per-case list prices vs fractional units used). ~5× per-call cost but
+// bounded by the global daily spend cap below.
+$model       = 'claude-sonnet-4-6';
 $maxTokens   = 4096;
 $maxFileSize = 10 * 1024 * 1024; // 10 MB
 
@@ -31,6 +37,13 @@ $maxFileSize = 10 * 1024 * 1024; // 10 MB
 $rateLimitDir = __DIR__ . '/.ratelimit';
 $rateWindow   = 60;
 $rateMax      = 10;
+
+// Global daily spend cap. Per-IP rate limits are bypassable with proxy
+// rotation, so this is the financial backstop: a hard ceiling on total
+// Vision-API calls per UTC day across ALL clients. Sized for ~100 legit
+// visitors/day at ~3 scans each, with headroom. Tune to your budget.
+$dailySpendMax  = 500;
+$dailySpendFile = $rateLimitDir . '/spend-analyze-daily.txt';
 
 // Detect production vs local development
 $serverHost = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
@@ -150,6 +163,18 @@ $payload = [
         ],
     ],
 ];
+
+// ─── Global daily spend cap ─────────────────────────────────
+// Increment+check happens AFTER all request validation but BEFORE the
+// upstream call, so malformed requests don't consume budget but every
+// request that would actually pay Anthropic does count.
+if (!incrementDailySpend($dailySpendFile, $dailySpendMax)) {
+    http_response_code(503);
+    header('Retry-After: 86400');
+    error_log('[api-analyze] daily spend cap reached (' . $dailySpendMax . ')');
+    echo json_encode(['error' => 'AI scan capacity reached for today. Please try again tomorrow.']);
+    exit;
+}
 
 // ─── Call Claude API ────────────────────────────────────────
 $claudeUrl     = 'https://api.anthropic.com/v1/messages';
@@ -344,6 +369,58 @@ function resolveViaDoH($host, $timeout = 8) {
         }
     }
     return null;
+}
+
+/**
+ * Atomic per-day counter for the global Anthropic-API spend cap. Returns
+ * true if the request is within budget (and was counted), false if the
+ * cap is already hit. The counter resets at UTC midnight via the date
+ * prefix; no cron needed.
+ *
+ * Fail-open on filesystem errors: a transient hosting hiccup shouldn't
+ * take the scan feature down, and per-IP rate-limit + origin-check still
+ * provide first-line defense. Errors are surfaced via error_log().
+ */
+function incrementDailySpend($file, $max) {
+    $today = gmdate('Y-m-d');
+    $dir   = dirname($file);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+        @file_put_contents($dir . '/.htaccess', "Require all denied\nDeny from all\n");
+    }
+    if (!is_dir($dir)) {
+        error_log('[api-analyze] spend-cap dir missing; failing open: ' . $dir);
+        return true;
+    }
+
+    $lockFile = $file . '.lock';
+    $fp = @fopen($lockFile, 'c');
+    if (!$fp) {
+        error_log('[api-analyze] spend-cap lock open failed; failing open');
+        return true;
+    }
+    if (!flock($fp, LOCK_EX)) {
+        fclose($fp);
+        error_log('[api-analyze] spend-cap lock acquire failed; failing open');
+        return true;
+    }
+
+    $count = 0;
+    $contents = file_exists($file) ? @file_get_contents($file) : '';
+    if (is_string($contents) && preg_match('/^(\d{4}-\d{2}-\d{2}):(\d+)\s*$/', $contents, $m)) {
+        if ($m[1] === $today) $count = (int) $m[2];
+    }
+
+    if ($count >= $max) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+        return false;
+    }
+
+    @file_put_contents($file, $today . ':' . ($count + 1));
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    return true;
 }
 
 /**

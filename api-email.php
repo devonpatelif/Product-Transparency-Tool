@@ -7,7 +7,10 @@
  */
 
 // ─── Load local config if present (gitignored) ─────────────
-$localConf = __DIR__ . '/config.local.php';
+// Prefer parent dir (outside web root); fall back to legacy in-project path.
+$localConf = file_exists(dirname(__DIR__) . '/config.local.php')
+    ? dirname(__DIR__) . '/config.local.php'
+    : __DIR__ . '/config.local.php';
 if (file_exists($localConf)) require_once $localConf;
 
 define('IFS_INTERNAL', true);
@@ -16,7 +19,12 @@ require __DIR__ . '/_check_origin.php';
 
 // ─── Configuration ───────────────────────────────────────────
 $allowedHost = 'industrialfinishes.com';
-$logFile     = __DIR__ . '/leads.csv';
+// Prefer parent dir (outside web root) so a misconfigured/missing .htaccess
+// doesn't expose captured PII. Falls back to legacy in-project location only
+// if a leads.csv already exists there (smooth migration: move the file once
+// and writes auto-switch to the secure path on the next request).
+$legacyLog   = __DIR__ . '/leads.csv';
+$logFile     = file_exists($legacyLog) ? $legacyLog : (dirname(__DIR__) . '/leads.csv');
 
 // Rate limit: legitimate users hit the email gate ~once per browser
 // (it never re-prompts after capture). 3 / hour leaves headroom for
