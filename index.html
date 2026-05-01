@@ -358,9 +358,58 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .scan-skip{background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;padding:12px;transition:color .2s;font-family:'Inter',sans-serif;text-decoration:underline;text-underline-offset:3px}
 .scan-skip:hover{color:var(--text-secondary)}
 
-.scan-spinner{width:56px;height:56px;border:3px solid rgba(194,213,1,.12);border-top-color:var(--lime);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 24px;box-shadow:0 0 30px rgba(194,213,1,.15)}
-.scan-preview-wrap{margin-top:20px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid rgba(255,255,255,.1);max-height:200px}
-.scan-preview-img{width:100%;height:auto;display:block;opacity:.6;max-height:200px;object-fit:cover}
+/* ── Radar loader (document analysis) ────────────────────────
+   Replaces the old .scan-spinner. The dial is a static SVG;
+   the sweep transform, dot fades, and progress fill are driven
+   from JS (initRadarLoader at the bottom of the page script). */
+.radar-loader{
+  --radar-card-bg:rgba(255,255,255,.04);
+  --radar-card-stroke:rgba(255,255,255,.08);
+  --radar-card-glow:0 12px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);
+  --radar-face:rgba(255,255,255,.02);
+  --radar-grid:rgba(255,255,255,.09);
+  --radar-axis:rgba(255,255,255,.05);
+  --radar-tick:rgba(255,255,255,.4);
+  --radar-tick-bg:#0c1018;
+  --radar-sweep:var(--lime);
+  --radar-sweep-glow:rgba(194,213,1,.6);
+  --radar-pin:var(--lime);
+  --radar-pin-glow:rgba(194,213,1,.55);
+  --radar-flag:var(--danger);
+  --radar-flag-glow:rgba(255,77,77,.55);
+  --radar-dot-idle:rgba(255,255,255,.18);
+  --radar-hub-stroke:rgba(255,255,255,.18);
+  display:flex;flex-direction:column;align-items:center;gap:22px;margin:0 auto 16px;max-width:100%
+}
+.radar-card{position:relative;width:min(520px,70vmin);height:min(520px,70vmin);padding:14px;background:var(--radar-card-bg);border:1px solid var(--radar-card-stroke);border-radius:50%;box-shadow:var(--radar-card-glow);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.radar-svg{display:block;width:100%;height:100%}
+.rd-face-outer{fill:var(--radar-face);stroke:var(--radar-card-stroke);stroke-width:1}
+.rd-ring{stroke:var(--radar-grid);stroke-width:1;fill:none}
+.rd-ring-dashed{stroke-dasharray:2 5}
+.rd-axis{stroke:var(--radar-axis);stroke-width:1}
+.rd-tick-bg{fill:var(--radar-tick-bg)}
+.rd-tick-text{fill:var(--radar-tick);font:700 9px 'JetBrains Mono',monospace;letter-spacing:1px}
+.rd-compass text{fill:var(--radar-tick);font:700 9px 'JetBrains Mono',monospace}
+.rd-sweep-arm{stroke:var(--radar-sweep);stroke-width:1.5;filter:drop-shadow(0 0 4px var(--radar-sweep-glow))}
+.rd-pin{fill:var(--radar-dot-idle);transition:fill .12s linear}
+.rd-pin.is-lit{fill:var(--radar-pin);filter:drop-shadow(0 0 6px var(--radar-pin-glow))}
+.rd-pin.is-lit.is-markup{fill:var(--radar-flag);filter:drop-shadow(0 0 8px var(--radar-flag-glow))}
+.rd-pulse{stroke:var(--radar-pin);stroke-width:1;fill:none}
+.rd-dot.is-markup .rd-pulse{stroke:var(--radar-flag);stroke-width:1.5}
+.rd-lock rect{stroke:var(--radar-flag);stroke-width:1.5;stroke-dasharray:3 2;fill:none}
+.rd-lock line{stroke:var(--radar-flag);stroke-width:1.5}
+.rd-label rect{fill:var(--radar-tick-bg);stroke:var(--radar-pin);stroke-width:1}
+.rd-dot.is-markup .rd-label rect{stroke:var(--radar-flag)}
+.rd-label text{fill:var(--radar-pin);font:700 8.5px 'JetBrains Mono',monospace}
+.rd-dot.is-markup .rd-label text{fill:var(--radar-flag)}
+.rd-hub-outer{fill:var(--radar-tick-bg);stroke:var(--radar-hub-stroke);stroke-width:1}
+.rd-hub-inner{fill:var(--radar-pin)}
+.rd-hub-dot{fill:var(--radar-tick-bg)}
+.radar-caption{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:min(520px,90vw)}
+.radar-pulse-label{font-size:13px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--radar-sweep);display:flex;align-items:center;gap:10px}
+.radar-pulse-dot{width:7px;height:7px;border-radius:4px;background:var(--radar-sweep);box-shadow:0 0 0 3px var(--radar-pin-glow);animation:radarPulse 1.4s ease-in-out infinite}
+.radar-status{margin:0;font-style:italic;font-size:14px;color:var(--text-secondary);text-align:center;min-height:1.4em}
+@keyframes radarPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
 
 /* Results state widens the scan-inner container so the summary + cards
    can use the full screen on desktop. The page itself scrolls — we drop
@@ -380,6 +429,9 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
    so the form feels focused. */
 .scan-screen.is-disambiguate{align-items:flex-start}
 .scan-screen.is-disambiguate .scan-inner{max-width:680px;padding:48px 24px 60px}
+/* Processing state: let the radar fill the screen — the upload/error states
+   still cap at the narrow 420px form width via .scan-inner's default. */
+.scan-screen.is-processing .scan-inner{max-width:none;padding:24px 24px}
 /* Kill the decorative radial gradients on scan-screen::before in results
    mode. They paint over scan-screen's solid bg with subtle lime/blue tints
    that don't extend into the sticky shield's area — creating a visible
@@ -957,8 +1009,24 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 [data-theme="light"] .scan-btn-secondary:hover{background:rgba(255,255,255,.8);border-color:rgba(0,0,0,.15)}
 [data-theme="light"] .scan-skip{color:var(--text-muted)}
 [data-theme="light"] .scan-skip:hover{color:var(--text-secondary)}
-[data-theme="light"] .scan-spinner{border-color:rgba(24,86,65,.12);border-top-color:var(--green-brand);box-shadow:0 0 30px rgba(24,86,65,.1)}
-[data-theme="light"] .scan-preview-wrap{border-color:rgba(0,0,0,.1)}
+[data-theme="light"] .radar-loader{
+  --radar-card-bg:#fff;
+  --radar-card-stroke:rgba(0,0,0,.08);
+  --radar-card-glow:0 12px 40px rgba(24,86,65,.12),0 0 0 8px #fff,0 0 0 9px rgba(0,0,0,.06),0 0 0 16px rgba(255,255,255,.6);
+  --radar-face:#fbfaf5;
+  --radar-grid:rgba(0,0,0,.07);
+  --radar-axis:rgba(0,0,0,.06);
+  --radar-tick:rgba(0,0,0,.4);
+  --radar-tick-bg:#fbfaf5;
+  --radar-sweep:var(--green-brand);
+  --radar-sweep-glow:rgba(24,86,65,.55);
+  --radar-pin:var(--green-brand);
+  --radar-pin-glow:rgba(24,86,65,.5);
+  --radar-flag:#c0392b;
+  --radar-flag-glow:rgba(192,57,43,.55);
+  --radar-dot-idle:rgba(0,0,0,.16);
+  --radar-hub-stroke:rgba(0,0,0,.12)
+}
 [data-theme="light"] .scan-result-card{background:rgba(255,255,255,.6);border-color:rgba(0,0,0,.08)}
 [data-theme="light"] .scan-result-card .card-check{border-color:rgba(0,0,0,.15)}
 [data-theme="light"] .scan-result-card .card-check.checked{background:var(--green-brand);border-color:var(--green-brand)}
@@ -1175,13 +1243,56 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
       <button class="scan-skip" id="scan-skip">Browse products manually</button>
     </div>
 
-    <!-- STATE 2: Processing -->
+    <!-- STATE 2: Processing — radar loader. Static SVG dial (rings, axes,
+         compass, hub) is authored here; the sweep wedge transform, the
+         32 dot field with hit-fades + lock crosshairs, and the progress
+         bar are all driven from initRadarLoader() at the bottom of the
+         page script. The #scan-status paragraph is preserved so the
+         existing handleScanUpload flow can keep updating live status. -->
     <div class="scan-processing" id="scan-processing" style="display:none">
-      <div class="scan-spinner"></div>
-      <h2 class="scan-title">Analyzing Document</h2>
-      <p class="scan-desc" id="scan-status">Reading your document with AI&hellip;</p>
-      <div class="scan-preview-wrap" id="scan-preview-wrap" style="display:none">
-        <img id="scan-preview-img" class="scan-preview-img" alt="Uploaded document">
+      <div class="radar-loader" id="radar-loader" role="status" aria-live="polite">
+        <div class="radar-card">
+          <svg class="radar-svg" viewBox="0 0 440 440" aria-hidden="true">
+            <defs>
+              <linearGradient id="rdSweepGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="200" y2="0">
+                <stop offset="0%" stop-color="var(--radar-sweep)" stop-opacity="0"/>
+                <stop offset="60%" stop-color="var(--radar-sweep)" stop-opacity=".18"/>
+                <stop offset="100%" stop-color="var(--radar-sweep)" stop-opacity=".55"/>
+              </linearGradient>
+            </defs>
+            <circle cx="220" cy="220" r="208" class="rd-face-outer"/>
+            <circle cx="220" cy="220" r="50"  class="rd-ring rd-ring-dashed"/>
+            <circle cx="220" cy="220" r="100" class="rd-ring rd-ring-dashed"/>
+            <circle cx="220" cy="220" r="150" class="rd-ring rd-ring-dashed"/>
+            <circle cx="220" cy="220" r="200" class="rd-ring"/>
+            <line x1="20"  y1="220" x2="420" y2="220" class="rd-axis"/>
+            <line x1="220" y1="20"  x2="220" y2="420" class="rd-axis"/>
+            <g class="rd-tick-labels">
+              <rect x="224" y="163" width="26" height="12" class="rd-tick-bg"/><text x="228" y="171" class="rd-tick-text">±5%</text>
+              <rect x="224" y="113" width="32" height="12" class="rd-tick-bg"/><text x="228" y="121" class="rd-tick-text">±10%</text>
+              <rect x="224" y="63"  width="32" height="12" class="rd-tick-bg"/><text x="228" y="71"  class="rd-tick-text">±15%</text>
+              <rect x="224" y="13"  width="32" height="12" class="rd-tick-bg"/><text x="228" y="21"  class="rd-tick-text">±20%</text>
+            </g>
+            <g class="rd-compass">
+              <text x="220" y="19"  text-anchor="middle">N</text>
+              <text x="424" y="223" text-anchor="middle">E</text>
+              <text x="220" y="427" text-anchor="middle">S</text>
+              <text x="16"  y="223" text-anchor="middle">W</text>
+            </g>
+            <g class="rd-dots"></g>
+            <g class="rd-sweep" transform="rotate(-90 220 220)">
+              <path d="M 220 220 L 420 220 A 200 200 0 0 0 381.78 102.44 Z" fill="url(#rdSweepGrad)" opacity=".85"/>
+              <line x1="220" y1="220" x2="420" y2="220" class="rd-sweep-arm"/>
+            </g>
+            <circle cx="220" cy="220" r="14" class="rd-hub-outer"/>
+            <circle cx="220" cy="220" r="9"  class="rd-hub-inner"/>
+            <circle cx="220" cy="220" r="3"  class="rd-hub-dot"/>
+          </svg>
+        </div>
+        <div class="radar-caption">
+          <div class="radar-pulse-label"><span class="radar-pulse-dot"></span>Analyzing Document</div>
+          <p class="radar-status" id="scan-status">Reading your document with AI&hellip;</p>
+        </div>
       </div>
     </div>
 
@@ -2431,6 +2542,7 @@ function showScanState(state) {
   const screen = document.getElementById('scan-screen');
   screen.classList.toggle('is-results', state === 'scan-results');
   screen.classList.toggle('is-disambiguate', state === 'scan-disambiguate');
+  screen.classList.toggle('is-processing', state === 'scan-processing');
 }
 
 function dismissScanScreen() {
@@ -3091,18 +3203,6 @@ async function handleScanUpload(file) {
 
   // Show processing state with preview
   showScanState('scan-processing');
-  const preview = document.getElementById('scan-preview-img');
-  const previewWrap = document.getElementById('scan-preview-wrap');
-  if (file.type && file.type.indexOf('pdf') === -1) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      preview.src = e.target.result;
-      previewWrap.style.display = '';
-    };
-    reader.readAsDataURL(file);
-  } else {
-    previewWrap.style.display = 'none';
-  }
 
   document.getElementById('scan-status').textContent = 'Reading your document with AI\u2026';
 
@@ -3119,6 +3219,18 @@ async function handleScanUpload(file) {
     await new Promise(r => setTimeout(r, 300));
 
     scanResults = await matchExtractedItems(items);
+
+    // Auto-resolve ambiguous matches whose options all share the same MSRP.
+    // The pricing analysis is identical regardless of which match we pick,
+    // so forcing the user to choose adds friction with no upside. r.catalog
+    // is already preselected to the first option by matchExtractedItems.
+    scanResults.forEach(r => {
+      if (r.ambiguous && Array.isArray(r.matchOptions) && r.matchOptions.length > 1) {
+        const firstPrice = r.matchOptions[0].price;
+        const allSame = r.matchOptions.every(o => o.price === firstPrice);
+        if (allSame) r.ambiguous = false;
+      }
+    });
 
     // If any item matched multiple catalog entries, gate the pricing analysis
     // behind a disambiguation step. We can't compute meaningful real-discount
@@ -3299,6 +3411,130 @@ function initScanScreen() {
     }
   });
 }
+
+// Radar loader: builds the 32-dot field once, then drives the sweep
+// rotation, dot fades/locks, and progress fill from one rAF loop. The
+// loop is cheap when scan-processing is hidden (offsetParent === null
+// short-circuits the per-dot work).
+(function initRadarLoader(){
+  var radar = document.getElementById('radar-loader');
+  if (!radar) return;
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var dotsLayer = radar.querySelector('.rd-dots');
+  var sweep = radar.querySelector('.rd-sweep');
+  if (!dotsLayer || !sweep) return;
+
+  var cx = 220, cy = 220;
+  var prefixes = ['3M','SW','PPG','NRT','MIR','IWA','AKZ','BAS'];
+  var dots = [];
+
+  // Deterministic golden-angle dot field — same algorithm as the source
+  // React component so the visual reads identically.
+  for (var i = 0; i < 32; i++) {
+    var angle = (i * 137.5) % 360;
+    var r = 28 + (i * 17) % 148;
+    var sku = prefixes[i % 8] + '-' + (1000 + (i * 37) % 999);
+    var markup = (i * 7) % 13 < 6;
+    var a = angle * Math.PI / 180;
+    var x = cx + Math.cos(a) * r;
+    var y = cy + Math.sin(a) * r;
+
+    var g = document.createElementNS(SVG_NS, 'g');
+    g.setAttribute('class', 'rd-dot' + (markup ? ' is-markup' : ''));
+
+    var pulse = document.createElementNS(SVG_NS, 'circle');
+    pulse.setAttribute('cx', x); pulse.setAttribute('cy', y);
+    pulse.setAttribute('r', '3'); pulse.setAttribute('class', 'rd-pulse');
+    pulse.setAttribute('opacity', '0');
+    g.appendChild(pulse);
+
+    var lock = null;
+    if (markup) {
+      lock = document.createElementNS(SVG_NS, 'g');
+      lock.setAttribute('class', 'rd-lock');
+      lock.setAttribute('opacity', '0');
+      var lr = document.createElementNS(SVG_NS, 'rect');
+      lr.setAttribute('x', x - 12); lr.setAttribute('y', y - 12);
+      lr.setAttribute('width', 24); lr.setAttribute('height', 24);
+      lock.appendChild(lr);
+      var lcoords = [
+        [x - 16, y, x - 8, y], [x + 8, y, x + 16, y],
+        [x, y - 16, x, y - 8], [x, y + 8, x, y + 16]
+      ];
+      for (var j = 0; j < 4; j++) {
+        var ln = document.createElementNS(SVG_NS, 'line');
+        ln.setAttribute('x1', lcoords[j][0]); ln.setAttribute('y1', lcoords[j][1]);
+        ln.setAttribute('x2', lcoords[j][2]); ln.setAttribute('y2', lcoords[j][3]);
+        lock.appendChild(ln);
+      }
+      g.appendChild(lock);
+    }
+
+    var pin = document.createElementNS(SVG_NS, 'circle');
+    pin.setAttribute('cx', x); pin.setAttribute('cy', y);
+    pin.setAttribute('r', '2.2'); pin.setAttribute('class', 'rd-pin');
+    g.appendChild(pin);
+
+    var label = document.createElementNS(SVG_NS, 'g');
+    label.setAttribute('class', 'rd-label');
+    label.setAttribute('opacity', '0');
+    var lw = sku.length * 5.2 + 10;
+    var lrect = document.createElementNS(SVG_NS, 'rect');
+    lrect.setAttribute('x', x + 12); lrect.setAttribute('y', y - 7);
+    lrect.setAttribute('width', lw); lrect.setAttribute('height', 13);
+    lrect.setAttribute('rx', 2);
+    label.appendChild(lrect);
+    var ltxt = document.createElementNS(SVG_NS, 'text');
+    ltxt.setAttribute('x', x + 16); ltxt.setAttribute('y', y + 3);
+    ltxt.textContent = sku;
+    label.appendChild(ltxt);
+    g.appendChild(label);
+
+    dotsLayer.appendChild(g);
+    dots.push({ angle: angle, markup: markup, pulse: pulse, lock: lock, pin: pin, label: label, lit: false, lockOn: false });
+  }
+
+  var start = performance.now();
+  var duration = 6000;
+
+  function tick(now) {
+    // Skip per-dot work when the loader is offscreen / display:none.
+    if (radar.offsetParent === null) {
+      requestAnimationFrame(tick);
+      return;
+    }
+    var t = ((now - start) % duration) / duration;
+    var sweepAngle = t * 360;
+    sweep.setAttribute('transform', 'rotate(' + (sweepAngle - 90) + ' ' + cx + ' ' + cy + ')');
+
+    for (var k = 0; k < dots.length; k++) {
+      var d = dots[k];
+      var delta = ((sweepAngle - 90) - d.angle) % 360;
+      if (delta < 0) delta += 360;
+      var fade = delta < 36 ? Math.pow(1 - delta / 36, 1.4) : 0;
+      var lit = fade > 0;
+      var locked = lit && fade > 0.6 && d.markup;
+
+      d.pulse.setAttribute('opacity', lit ? fade.toFixed(3) : '0');
+      d.pulse.setAttribute('r', (3 + (1 - fade) * 18).toFixed(1));
+
+      if (d.lock) d.lock.setAttribute('opacity', locked ? fade.toFixed(3) : '0');
+
+      d.pin.setAttribute('r', lit ? (d.markup ? 4.5 : 3.5) : 2.2);
+      // Only touch the class attribute when the lit state actually
+      // flips — otherwise we churn the style recalc 60×/sec for nothing.
+      if (lit !== d.lit) {
+        d.pin.setAttribute('class', 'rd-pin' + (lit ? (d.markup ? ' is-lit is-markup' : ' is-lit') : ''));
+        d.lit = lit;
+      }
+
+      var labelOpacity = (lit && fade > 0.55) ? Math.min(1, (fade - 0.5) * 3) : 0;
+      d.label.setAttribute('opacity', labelOpacity.toFixed(3));
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
 
 loadData();
 </script>
