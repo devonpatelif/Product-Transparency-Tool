@@ -428,13 +428,25 @@ function handleMatch($catalog, $maxItems) {
 
     $items = array_slice($payload['items'], 0, $maxItems);
 
-    // Build part-number index over the catalog (cheap on every request — ~25k entries)
-    $partIndex = [];
+    // Build part-number index over the catalog (cheap on every request — ~25k entries).
+    // Also build a prefix index for sized-variant matching: an invoice that lists the
+    // base part "WB2040" should still match catalog entries "WB2040-3.5L" and
+    // "WB2040-1L". Indexed by the alphanumeric run before the FIRST separator, with a
+    // 4-char minimum to avoid spurious matches on short stems (e.g. "100" → "100-X").
+    $partIndex   = [];
+    $prefixIndex = [];
     foreach ($catalog as $i => $r) {
         $norm = normalizePartNum($r['part']);
         if ($norm !== '') {
             if (!isset($partIndex[$norm])) $partIndex[$norm] = [];
             $partIndex[$norm][] = $i;
+
+            $orig = strtoupper((string) $r['part']);
+            if (preg_match('/^([A-Z0-9]+)[\-\.\/]/', $orig, $m) && strlen($m[1]) >= 4) {
+                $prefix = $m[1];
+                if (!isset($prefixIndex[$prefix])) $prefixIndex[$prefix] = [];
+                $prefixIndex[$prefix][] = $i;
+            }
         }
     }
 
@@ -457,6 +469,19 @@ function handleMatch($catalog, $maxItems) {
         $matchOptions = [];
         if ($normPart !== '' && isset($partIndex[$normPart])) {
             foreach (array_slice($partIndex[$normPart], 0, $maxOptions) as $idx) {
+                $matchOptions[] = $catalog[$idx];
+            }
+        }
+
+        // 1b. Prefix-of-catalog fallback. If the invoice listed only the base
+        //     part ("WB2040") but the catalog only carries sized variants
+        //     ("WB2040-3.5L", "WB2040-1L"), surface all of them as ambiguous
+        //     options. Directional (extracted shorter, must be the alphanumeric
+        //     prefix that ends at a separator), so this does NOT reintroduce the
+        //     bidirectional substring matching that previously caused false
+        //     positives like catalog "100" matching extracted "MB100".
+        if (count($matchOptions) === 0 && $normPart !== '' && isset($prefixIndex[$normPart])) {
+            foreach (array_slice($prefixIndex[$normPart], 0, $maxOptions) as $idx) {
                 $matchOptions[] = $catalog[$idx];
             }
         }
