@@ -424,6 +424,12 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
    a leak zone above the bar where scrolled cards bleed through. */
 .scan-screen.is-results{align-items:flex-start}
 .scan-screen.is-results .scan-inner{max-width:1080px;padding:48px 24px 80px}
+/* Summary sub-view (the post-confirm pricing summary) has only one card +
+   CTA + button row — narrow the container so the layout doesn't feel sparse
+   and the focus stays on the headline. Sticky on .scan-totals is harmless
+   here (single card, nothing scrolls past it) so we leave that alone. */
+.scan-screen.is-results.is-summary .scan-inner{max-width:820px}
+.scan-screen.is-results.is-summary .scan-title{margin-bottom:24px}
 /* Disambiguate gets a medium width — wider than the upload screen so long
    product descriptions in the dropdowns wrap nicely, narrower than results
    so the form feels focused. */
@@ -666,7 +672,7 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
   background:var(--text-muted);margin-right:8px;flex-shrink:0;opacity:.6}
 
 .scan-card-pricegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.scan-input-cell{display:flex;flex-direction:column;gap:6px}
+.scan-input-cell{display:flex;flex-direction:column;gap:6px;position:relative}
 .scan-input-cell label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted)}
 .scan-input{width:100%;padding:10px 12px;background:rgba(0,0,0,.22);color:var(--text-primary);
   border:1px solid rgba(255,255,255,.08);border-radius:9px;font-size:14.5px;font-weight:600;
@@ -1062,10 +1068,16 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 .email-gate-benefits li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary)}
 .email-gate-benefits li svg{flex-shrink:0;color:var(--lime)}
 .email-gate-form{display:flex;flex-direction:column;gap:10px}
+.email-gate-tabs{display:flex;gap:4px;padding:4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-lg);margin-bottom:2px}
+.email-gate-tab{flex:1;padding:10px 12px;font-size:13px;font-weight:700;letter-spacing:.3px;font-family:'Inter',sans-serif;background:transparent;border:none;border-radius:calc(var(--radius-lg) - 4px);color:var(--text-muted);cursor:pointer;transition:all .18s ease}
+.email-gate-tab:hover{color:var(--text-primary);background:rgba(255,255,255,.04)}
+.email-gate-tab.is-active{background:rgba(194,213,1,.14);color:var(--lime);box-shadow:0 0 0 1px rgba(194,213,1,.22) inset}
 .email-gate-input{width:100%;padding:14px 16px;font-size:15px;font-family:'Inter',sans-serif;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-lg);color:var(--text-primary);outline:none;transition:all .2s ease;box-sizing:border-box}
 .email-gate-input::placeholder{color:var(--text-muted)}
 .email-gate-input:focus{border-color:rgba(194,213,1,.5);background:rgba(255,255,255,.06);box-shadow:0 0 0 3px rgba(194,213,1,.12)}
 .email-gate-input.error{border-color:rgba(255,90,90,.6);box-shadow:0 0 0 3px rgba(255,90,90,.12)}
+.email-gate-error{min-height:16px;font-size:12px;font-weight:600;color:#ff7a7a;line-height:1.3;letter-spacing:.2px;padding:0 2px}
+.email-gate-error:empty{display:none}
 .email-gate-submit{width:100%;padding:14px 20px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;background:var(--lime);color:var(--bg-deep);border:none;border-radius:var(--radius-lg);cursor:pointer;transition:all .2s ease;letter-spacing:.3px;box-shadow:0 4px 20px rgba(194,213,1,.25),0 0 40px rgba(194,213,1,.08)}
 .email-gate-submit:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(194,213,1,.35)}
 .email-gate-submit:active{transform:translateY(1px);box-shadow:0 2px 10px rgba(194,213,1,.2)}
@@ -1082,6 +1094,11 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 [data-theme="light"] .email-gate-input:focus{border-color:rgba(24,86,65,.5);background:rgba(0,0,0,.02);box-shadow:0 0 0 3px rgba(24,86,65,.1)}
 [data-theme="light"] .email-gate-submit{background:var(--green-brand);color:#fff;box-shadow:0 4px 20px rgba(24,86,65,.2)}
 [data-theme="light"] .email-gate-submit:hover{box-shadow:0 8px 30px rgba(24,86,65,.3)}
+[data-theme="light"] .email-gate-tabs{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08)}
+[data-theme="light"] .email-gate-tab{color:var(--text-muted)}
+[data-theme="light"] .email-gate-tab:hover{color:var(--text-primary);background:rgba(0,0,0,.04)}
+[data-theme="light"] .email-gate-tab.is-active{background:rgba(24,86,65,.1);color:var(--green-brand);box-shadow:0 0 0 1px rgba(24,86,65,.22) inset}
+[data-theme="light"] .email-gate-error{color:#c0392b}
 </style>
 </head>
 <body>
@@ -1206,17 +1223,22 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
     </div>
     <h2 class="email-gate-title" id="email-gate-title">Unlock the full report</h2>
-    <p class="email-gate-desc" id="email-gate-desc">Enter your email to continue comparing, scan invoices with AI, and export your savings report.</p>
+    <p class="email-gate-desc" id="email-gate-desc">Enter your email or phone to continue comparing, scan invoices with AI, and export your savings report.</p>
     <ul class="email-gate-benefits">
       <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Compare unlimited items side-by-side</li>
       <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Scan invoices &amp; quotes with AI</li>
       <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Export your full savings report to CSV</li>
     </ul>
     <form class="email-gate-form" id="email-gate-form" novalidate>
-      <input type="email" class="email-gate-input" id="email-gate-input" placeholder="you@company.com" autocomplete="email" required>
+      <div class="email-gate-tabs" role="tablist" aria-label="Contact method">
+        <button type="button" class="email-gate-tab is-active" data-mode="email" role="tab" aria-selected="true">Email</button>
+        <button type="button" class="email-gate-tab" data-mode="phone" role="tab" aria-selected="false">Phone</button>
+      </div>
+      <input type="email" class="email-gate-input" id="email-gate-input" placeholder="you@company.com" autocomplete="email" inputmode="email" required>
+      <div class="email-gate-error" id="email-gate-error" aria-live="polite"></div>
       <button type="submit" class="email-gate-submit" id="email-gate-submit">Continue</button>
     </form>
-    <p class="email-gate-privacy">We'll only use your email to share pricing insights. No spam.</p>
+    <p class="email-gate-privacy" id="email-gate-privacy">We'll only use your email or phone to share pricing insights. No spam.</p>
   </div>
 </div>
 
@@ -1313,41 +1335,70 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
       </div>
     </div>
 
-    <!-- STATE 3: Results — the final destination after a scan. Shows a
-         totals banner, all matched items as live calc cards, and a
-         "Not Found" notice for unmatched part numbers. -->
+    <!-- STATE 3: Results — split into two sub-views:
+         (a) EDIT view — user reviews and tweaks qty/you-pay/disc on each
+             matched line item, then confirms by hitting "View Pricing
+             Summary →".
+         (b) SUMMARY view — shows the top totals card (the headline
+             You're saving X% banner) + the CTA + export/rescan/back
+             actions. The totals card is computed live but only revealed
+             once the user has finished editing. -->
     <div class="scan-results" id="scan-results" style="display:none">
-      <h2 class="scan-title">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        Your Pricing Analysis
-      </h2>
-      <p class="scan-desc" id="scan-results-summary"></p>
-      <div class="scan-totals" id="scan-totals" style="display:none"></div>
-      <div class="scan-blanket" id="scan-blanket" style="display:none">
-        <span class="scan-blanket-label">Same discount across all items?</span>
-        <input type="number" class="scan-blanket-input" id="scan-blanket-disc" min="0" max="99" placeholder="0">
-        <span class="scan-blanket-pct">%</span>
-        <span class="scan-blanket-spacer"></span>
-        <div class="scan-blanket-applywrap">
-          <button class="scan-blanket-apply" id="scan-blanket-apply" type="button">
-            Apply &#9662;
-          </button>
-          <div class="scan-blanket-menu" id="scan-blanket-menu">
-            <div class="scan-blanket-option" data-action="all">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-              Apply to All Items
+
+      <!-- ── EDIT SUB-VIEW ─────────────────────────────────────── -->
+      <div class="scan-results-edit" id="scan-results-edit">
+        <h2 class="scan-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Confirm Your Line Items
+        </h2>
+        <p class="scan-desc" id="scan-results-summary"></p>
+        <div class="scan-blanket" id="scan-blanket" style="display:none">
+          <span class="scan-blanket-label">Same discount across all items?</span>
+          <input type="number" class="scan-blanket-input" id="scan-blanket-disc" min="0" max="99" placeholder="0">
+          <span class="scan-blanket-pct">%</span>
+          <span class="scan-blanket-spacer"></span>
+          <div class="scan-blanket-applywrap">
+            <button class="scan-blanket-apply" id="scan-blanket-apply" type="button">
+              Apply &#9662;
+            </button>
+            <div class="scan-blanket-menu" id="scan-blanket-menu">
+              <div class="scan-blanket-option" data-action="all">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                Apply to All Items
+              </div>
+              <div class="scan-blanket-cats-wrap" id="scan-blanket-cats"></div>
             </div>
-            <div class="scan-blanket-cats-wrap" id="scan-blanket-cats"></div>
           </div>
         </div>
+        <div class="scan-results-list" id="scan-results-list"></div>
+        <div class="scan-actions-row">
+          <button class="scan-btn scan-btn-primary" id="scan-view-summary">
+            View Pricing Summary
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+          <button class="scan-btn scan-btn-secondary" id="scan-rescan-edit">Scan Another</button>
+        </div>
+        <button class="scan-skip" id="scan-results-skip-edit" style="display:block;margin:10px auto 0">Browse catalog manually</button>
       </div>
-      <div class="scan-results-list" id="scan-results-list"></div>
-      <div class="scan-cta" id="scan-cta" style="display:none"></div>
-      <div class="scan-actions-row">
-        <button class="scan-btn scan-btn-primary" id="scan-export">Export Report (CSV)</button>
-        <button class="scan-btn scan-btn-secondary" id="scan-rescan">Scan Another</button>
+
+      <!-- ── SUMMARY SUB-VIEW ──────────────────────────────────── -->
+      <div class="scan-results-summary-view" id="scan-results-summary-view" style="display:none">
+        <h2 class="scan-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Your Pricing Summary
+        </h2>
+        <div class="scan-totals" id="scan-totals" style="display:none"></div>
+        <div class="scan-cta" id="scan-cta" style="display:none"></div>
+        <div class="scan-actions-row">
+          <button class="scan-btn scan-btn-secondary" id="scan-back-edit">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Back to Edit
+          </button>
+          <button class="scan-btn scan-btn-primary" id="scan-export">Export Report (CSV)</button>
+          <button class="scan-btn scan-btn-secondary" id="scan-rescan">Scan Another</button>
+        </div>
+        <button class="scan-skip" id="scan-results-skip" style="display:block;margin:10px auto 0">Browse catalog manually</button>
       </div>
-      <button class="scan-skip" id="scan-results-skip" style="display:block;margin:10px auto 0">Browse catalog manually</button>
     </div>
 
     <!-- STATE 4: Error -->
@@ -1463,37 +1514,135 @@ const DATA_URL = 'api-data.php';
 try { localStorage.removeItem('ifs_api_key'); } catch (e) {}
 
 /* ═══════════════════════════════════════════════════════════
-   EMAIL GATE — captures email before unlocking item #2,
-   invoice scanner, and CSV export. One capture unlocks all.
+   CONTACT GATE — captures email OR phone before unlocking
+   item #2, invoice scanner, and CSV export. One capture
+   unlocks all. The function is still named `requireEmail` /
+   localStorage key `ifs_email` is kept for back-compat with
+   browsers that captured under the email-only version.
    ═══════════════════════════════════════════════════════════ */
-const EMAIL_KEY     = 'ifs_email';
+const EMAIL_KEY     = 'ifs_email';   // legacy key — still set when email is given
+const PHONE_KEY     = 'ifs_phone';   // new key — set when phone is given
 const EMAIL_API_URL = 'api-email.php';
 const EMAIL_RX      = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Phone: allow common formatting characters during entry, then validate
+// the digits-only normalized form. NANP is 10 digits; E.164 caps at 15
+// (incl. country code). Anything in [10,15] digits passes.
+const PHONE_ALLOWED_RX = /^[\d\s+().-]+$/;
 
 const EMAIL_GATE_COPY = {
-  compare: 'Enter your email to add more items to your comparison, scan invoices with AI, and export your savings report.',
-  scan:    'Enter your email to unlock AI invoice scanning, unlimited comparisons, and CSV export.',
-  export:  'Enter your email to export your savings report, scan invoices with AI, and add unlimited comparisons.'
+  compare: 'Enter your email or phone to add more items to your comparison, scan invoices with AI, and export your savings report.',
+  scan:    'Enter your email or phone to unlock AI invoice scanning, unlimited comparisons, and CSV export.',
+  export:  'Enter your email or phone to export your savings report, scan invoices with AI, and add unlimited comparisons.'
 };
 
 let _emailGateCallback = null;
 let _emailGateTrigger  = '';
+let _emailGateMode     = 'email'; // 'email' | 'phone'
 
-function hasEmail() {
-  try { return !!localStorage.getItem(EMAIL_KEY); } catch (e) { return false; }
+function hasContact() {
+  try {
+    return !!localStorage.getItem(EMAIL_KEY) || !!localStorage.getItem(PHONE_KEY);
+  } catch (e) { return false; }
+}
+// Back-compat alias — callers historically used hasEmail(); keep it working.
+function hasEmail() { return hasContact(); }
+
+// Strip everything except digits. Used to validate phone length and to
+// normalize before sending to the server / storing.
+function normalizePhone(s) {
+  return (s || '').replace(/\D+/g, '');
+}
+
+// Reject obviously bogus patterns: all-same-digit (5555555555), or a fully
+// ascending/descending sequence mod-10 (1234567890, 0987654321). These are
+// the inputs people type when they want to bypass a contact form.
+function hasObviousFakePhonePattern(d) {
+  if (/^(\d)\1+$/.test(d)) return true;
+  let asc = true, desc = true;
+  for (let i = 1; i < d.length; i++) {
+    const prev = +d[i - 1], curr = +d[i];
+    if ((prev + 1) % 10 !== curr) asc  = false;
+    if ((prev + 9) % 10 !== curr) desc = false;
+    if (!asc && !desc) break;
+  }
+  return asc || desc;
+}
+
+function isValidPhone(raw) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed || !PHONE_ALLOWED_RX.test(trimmed)) return false;
+  const digits = normalizePhone(trimmed);
+  if (digits.length < 10 || digits.length > 15) return false;
+  if (hasObviousFakePhonePattern(digits)) return false;
+
+  // For NANP-shaped numbers (10 digits, or 11 starting with country code 1),
+  // enforce the basic NANP structural rules:
+  //   - area code (NXX) first digit must be 2-9
+  //   - exchange code (NXX) first digit must be 2-9
+  //   - 555 is a reserved fictional area code
+  // This catches "0123456789", "1234567890" stragglers, and the dummy
+  // "(555) 555-5555" that pre-fills test forms everywhere.
+  const nanp = digits.length === 10
+    ? digits
+    : (digits.length === 11 && digits[0] === '1' ? digits.slice(1) : null);
+  if (nanp) {
+    const area = nanp.slice(0, 3);
+    const exch = nanp.slice(3, 6);
+    if (area[0] === '0' || area[0] === '1') return false;
+    if (exch[0] === '0' || exch[0] === '1') return false;
+    if (area === '555') return false;
+  }
+  return true;
+}
+
+function isValidEmail(raw) {
+  const trimmed = (raw || '').trim();
+  // Cap length so a 10MB paste can't pin the regex engine.
+  return trimmed.length <= 254 && EMAIL_RX.test(trimmed);
+}
+
+function setGateMode(mode) {
+  if (mode !== 'email' && mode !== 'phone') mode = 'email';
+  _emailGateMode = mode;
+  const tabs  = document.querySelectorAll('.email-gate-tab');
+  const input = document.getElementById('email-gate-input');
+  const err   = document.getElementById('email-gate-error');
+  tabs.forEach(t => {
+    const active = t.dataset.mode === mode;
+    t.classList.toggle('is-active', active);
+    t.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  if (mode === 'phone') {
+    input.type = 'tel';
+    input.placeholder = '(555) 123-4567';
+    input.autocomplete = 'tel';
+    input.setAttribute('inputmode', 'tel');
+    input.setAttribute('aria-label', 'Phone number');
+  } else {
+    input.type = 'email';
+    input.placeholder = 'you@company.com';
+    input.autocomplete = 'email';
+    input.setAttribute('inputmode', 'email');
+    input.setAttribute('aria-label', 'Email address');
+  }
+  // Clear stale value/error on mode swap so a half-typed email doesn't
+  // pretend to be a valid phone number.
+  input.value = '';
+  input.classList.remove('error');
+  if (err) err.textContent = '';
+  setTimeout(() => input.focus(), 0);
 }
 
 function requireEmail(trigger, onSuccess) {
-  if (hasEmail()) { onSuccess(); return; }
+  if (hasContact()) { onSuccess(); return; }
   _emailGateCallback = onSuccess;
   _emailGateTrigger  = trigger;
   const descEl = document.getElementById('email-gate-desc');
   if (descEl) descEl.textContent = EMAIL_GATE_COPY[trigger] || EMAIL_GATE_COPY.compare;
   const gate = document.getElementById('email-gate');
   gate.classList.remove('hidden');
-  const input = document.getElementById('email-gate-input');
-  input.classList.remove('error');
-  setTimeout(() => input.focus(), 40);
+  // Always reopen on email mode — that's still the primary capture target.
+  setGateMode('email');
 }
 
 function closeEmailGate() {
@@ -1505,20 +1654,47 @@ function closeEmailGate() {
 function submitEmailGate(e) {
   if (e) e.preventDefault();
   const input = document.getElementById('email-gate-input');
-  const email = (input.value || '').trim();
-  if (!EMAIL_RX.test(email)) {
+  const errEl = document.getElementById('email-gate-error');
+  const raw   = (input.value || '').trim();
+
+  let valid, errMsg, payload;
+  if (_emailGateMode === 'phone') {
+    valid = isValidPhone(raw);
+    errMsg = !raw
+      ? 'Enter your phone number.'
+      : 'Enter a valid phone number (10–15 digits).';
+    payload = { field: 'phone', value: normalizePhone(raw) };
+  } else {
+    valid = isValidEmail(raw);
+    errMsg = !raw
+      ? 'Enter your email address.'
+      : 'Enter a valid email address (e.g. you@company.com).';
+    payload = { field: 'email', value: raw };
+  }
+
+  if (!valid) {
     input.classList.add('error');
+    if (errEl) errEl.textContent = errMsg;
     input.focus();
     return;
   }
-  try { localStorage.setItem(EMAIL_KEY, email); } catch (err) {}
+
+  // Persist to localStorage so the gate doesn't reappear on this browser.
+  // Both keys are checked by hasContact(); we only set the one that was filled.
+  try {
+    if (payload.field === 'phone') localStorage.setItem(PHONE_KEY, payload.value);
+    else                            localStorage.setItem(EMAIL_KEY, payload.value);
+  } catch (err) {}
+
   // Fire-and-forget server capture — never block UX on network
   try {
     const fd = new FormData();
-    fd.append('email', email);
+    fd.append(payload.field, payload.value);
     fd.append('trigger', _emailGateTrigger);
     fetch(EMAIL_API_URL, { method: 'POST', body: fd, keepalive: true }).catch(() => {});
   } catch (err) {}
+
+  if (errEl) errEl.textContent = '';
   const cb = _emailGateCallback;
   closeEmailGate();
   if (cb) cb();
@@ -1536,7 +1712,15 @@ function initEmailGate() {
     }
   });
   const input = document.getElementById('email-gate-input');
-  input.addEventListener('input', function() { this.classList.remove('error'); });
+  const errEl = document.getElementById('email-gate-error');
+  input.addEventListener('input', function() {
+    this.classList.remove('error');
+    if (errEl) errEl.textContent = '';
+  });
+  // Email/Phone tab switcher
+  document.querySelectorAll('.email-gate-tab').forEach(tab => {
+    tab.addEventListener('click', () => setGateMode(tab.dataset.mode));
+  });
 }
 
 const CATEGORY_MAP = {
@@ -2543,6 +2727,24 @@ function showScanState(state) {
   screen.classList.toggle('is-results', state === 'scan-results');
   screen.classList.toggle('is-disambiguate', state === 'scan-disambiguate');
   screen.classList.toggle('is-processing', state === 'scan-processing');
+  // is-summary only applies inside scan-results — drop it whenever we leave.
+  if (state !== 'scan-results') screen.classList.remove('is-summary');
+}
+
+/* The pricing-analysis state has two sub-views: an edit/confirm step
+   (line items with editable qty / you-pay / disc fields) and a final
+   summary step (headline totals card + CTA). They live inside the same
+   #scan-results container and toggle by display:none. Calling code must
+   first switch to the 'scan-results' parent state via showScanState. */
+function showResultsSubView(view) {
+  const editEl    = document.getElementById('scan-results-edit');
+  const summaryEl = document.getElementById('scan-results-summary-view');
+  if (!editEl || !summaryEl) return;
+  const isSummary = view === 'summary';
+  editEl.style.display    = isSummary ? 'none' : '';
+  summaryEl.style.display = isSummary ? '' : 'none';
+  const screen = document.getElementById('scan-screen');
+  if (screen) screen.classList.toggle('is-summary', isSummary);
 }
 
 function dismissScanScreen() {
@@ -2691,10 +2893,15 @@ function renderScanResults() {
       '<div class="scan-card-pricegrid">' +
         '<div class="scan-input-cell"><label>Qty</label>' +
           '<input type="number" class="scan-input" data-scan-input="qty" data-idx="' + origIdx + '" min="1" max="9999" value="' + r.calc.qty + '"></div>' +
+        // Match the side-panel inputs: step="1" (whole-dollar arrow stepping),
+        // "$0.00" placeholder, and a focus-only hint tooltip. The .sp-youpay
+        // class only carries the focus→hint behavior — it has no other styles.
         '<div class="scan-input-cell"><label>You Pay</label>' +
-          '<input type="number" class="scan-input" data-scan-input="youPay" data-idx="' + origIdx + '" min="0" step="0.01" placeholder="0.00" value="' + (r.calc.youPay > 0 ? r.calc.youPay : '') + '"></div>' +
+          '<input type="number" class="scan-input sp-youpay" data-scan-input="youPay" data-idx="' + origIdx + '" min="0" step="1" placeholder="$0.00" value="' + (r.calc.youPay > 0 ? r.calc.youPay : '') + '">' +
+          '<span class="sp-hint">What you pay per unit after discount</span></div>' +
         '<div class="scan-input-cell"><label>Stated Disc %</label>' +
-          '<input type="number" class="scan-input" data-scan-input="disc" data-idx="' + origIdx + '" min="0" max="99" placeholder="0" value="' + (r.calc.disc > 0 ? r.calc.disc : '') + '"></div>' +
+          '<input type="number" class="scan-input sp-disc" data-scan-input="disc" data-idx="' + origIdx + '" min="0" max="99" placeholder="0" value="' + (r.calc.disc > 0 ? r.calc.disc : '') + '">' +
+          '<span class="sp-hint">Discount % your supplier gives you</span></div>' +
       '</div>' +
       // Mirrors the .sp-prices grid from the side panel: 2 columns, the
       // last "Discount Breakdown" row spans full width and renders the
@@ -3026,7 +3233,7 @@ function recalcScanTotals() {
       '<div class="scan-bdown" style="text-align:center;padding:20px 16px">' +
         '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.4px;font-weight:800;color:var(--text-secondary);margin-bottom:6px">MSRP Total Across ' + matched.length + ' Matched Items</div>' +
         '<div style="font-size:32px;font-weight:800;font-family:Space Grotesk,sans-serif;color:var(--text-primary);line-height:1;letter-spacing:-1px">' + esc(fmt(msrpTotal)) + '</div>' +
-        '<div style="font-size:13px;color:var(--text-muted);margin-top:12px;line-height:1.5">Add what you pay on each card below to expose the markup story.</div>' +
+        '<div style="font-size:13px;color:var(--text-muted);margin-top:12px;line-height:1.5">Go back to add what you pay on each line item to expose the markup story.</div>' +
       '</div>';
   } else if (!hasDisc) {
     // Some You Pay values entered but no stated discount on any item — show
@@ -3053,7 +3260,7 @@ function recalcScanTotals() {
         '<div style="text-align:center;font-size:13px;font-weight:700;color:' + realDispCls + ';margin-top:10px;letter-spacing:.3px">' +
           esc(realLabel) +
         '</div>' +
-        '<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:6px">Add stated discount on each card to see the hidden-markup story.</div>' +
+        '<div style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:6px">Go back and add stated discount on each line to see the hidden-markup story.</div>' +
       '</div>';
   } else {
     // Full breakdown — mirrors recalcScanCard's branch 2 visual exactly.
@@ -3244,6 +3451,7 @@ async function handleScanUpload(file) {
     } else {
       renderScanResults();
       showScanState('scan-results');
+      showResultsSubView('edit');
     }
 
   } catch (err) {
@@ -3277,15 +3485,37 @@ function initScanScreen() {
   // Skip / dismiss buttons
   document.getElementById('scan-skip').addEventListener('click', dismissScanScreen);
   document.getElementById('scan-results-skip').addEventListener('click', dismissScanScreen);
+  document.getElementById('scan-results-skip-edit').addEventListener('click', dismissScanScreen);
   document.getElementById('scan-error-skip').addEventListener('click', dismissScanScreen);
   document.getElementById('disambig-skip').addEventListener('click', dismissScanScreen);
 
-  // Disambiguate → Pricing Analysis. The user's selections are already
-  // saved on scanResults[i].catalog via the live change handler, so we
-  // just render and switch state.
+  // Disambiguate → Pricing Analysis (edit sub-view first). The user's
+  // selections are already saved on scanResults[i].catalog via the live
+  // change handler, so we just render and switch state.
   document.getElementById('disambig-continue').addEventListener('click', function() {
     renderScanResults();
     showScanState('scan-results');
+    showResultsSubView('edit');
+  });
+
+  // Edit → Summary: user has finished tweaking line items, show the
+  // headline totals card and the conversion CTA.
+  document.getElementById('scan-view-summary').addEventListener('click', function() {
+    // Make sure totals are fresh — recalcScanTotals also runs on every
+    // input event, but the user could click straight through without
+    // editing, and the very first render also calls it. This is just
+    // belt-and-suspenders.
+    recalcScanTotals();
+    showResultsSubView('summary');
+    // Scroll to the top of the summary view so the headline card is in view.
+    const screen = document.getElementById('scan-screen');
+    if (screen) screen.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Summary → Edit: back button returns to the line-item editor.
+  document.getElementById('scan-back-edit').addEventListener('click', function() {
+    showResultsSubView('edit');
   });
 
   // Retry
@@ -3295,13 +3525,17 @@ function initScanScreen() {
     document.getElementById('scan-gallery').value = '';
   });
 
-  // Rescan
-  document.getElementById('scan-rescan').addEventListener('click', function() {
+  // Rescan — both buttons (one on the edit sub-view, one on the summary
+  // sub-view) clear results and return to the upload screen.
+  function rescanReset() {
     scanResults = [];
+    showResultsSubView('edit'); // reset sub-view so next results land on edit
     showScanState('scan-upload');
     document.getElementById('scan-capture').value = '';
     document.getElementById('scan-gallery').value = '';
-  });
+  }
+  document.getElementById('scan-rescan').addEventListener('click', rescanReset);
+  document.getElementById('scan-rescan-edit').addEventListener('click', rescanReset);
 
   // Export Report — reuses the existing CSV export logic in the side panel
   // (which reads selected[] — already kept in sync by syncScanResultsToSelected).
