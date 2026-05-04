@@ -424,11 +424,10 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
    a leak zone above the bar where scrolled cards bleed through. */
 .scan-screen.is-results{align-items:flex-start}
 .scan-screen.is-results .scan-inner{max-width:1080px;padding:48px 24px 80px}
-/* Summary sub-view (the post-confirm pricing summary) has only one card +
-   CTA + button row — narrow the container so the layout doesn't feel sparse
-   and the focus stays on the headline. Sticky on .scan-totals is harmless
-   here (single card, nothing scrolls past it) so we leave that alone. */
-.scan-screen.is-results.is-summary .scan-inner{max-width:820px}
+/* Summary sub-view (the ledger-stamp pricing summary) holds a multi-section
+   case-file report — narrow the container relative to the wide edit grid
+   so the report reads like a focused document, not a dashboard. */
+.scan-screen.is-results.is-summary .scan-inner{max-width:900px}
 .scan-screen.is-results.is-summary .scan-title{margin-bottom:24px}
 /* Disambiguate gets a medium width — wider than the upload screen so long
    product descriptions in the dropdowns wrap nicely, narrower than results
@@ -803,6 +802,438 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
 [data-theme="light"] .scan-cta-btn:hover{box-shadow:0 12px 32px rgba(24,86,65,.34),0 0 52px rgba(24,86,65,.18)}
 [data-theme="light"] .scan-cta-secondary{border-color:rgba(0,0,0,.15);color:var(--text-secondary)}
 [data-theme="light"] .scan-cta-secondary:hover{background:rgba(0,0,0,.04);color:var(--text-primary)}
+
+/* ═════════════ LEDGER-STAMP PRICING SUMMARY ═════════════
+   "Case file" report layout, styled to match the rest of the
+   tool: liquid-glass cards (translucent + backdrop-filter),
+   CSS-variable colors, --radius-lg corners, scan-card-style
+   verdict left-borders, and the lime/green-brand accent split
+   for dark vs. light themes. */
+.ledger-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:10px;letter-spacing:2.4px;text-transform:uppercase;
+  color:var(--lime);font-weight:700;font-family:'Inter',sans-serif;
+  padding:6px 12px;border-radius:50px;margin:0 0 18px;
+  background:var(--lime-soft);border:1px solid rgba(194,213,1,.2)}
+[data-theme="light"] .ledger-eyebrow{
+  color:var(--green-brand);background:rgba(24,86,65,.06);border-color:rgba(24,86,65,.18)}
+
+/* ── Case file card — same liquid-glass shell as .scan-card,
+   plus a verdict left-border that flips between danger/lime to
+   match the rest of the tool's inflation-vs-fair signal language. */
+.ledger-case{
+  position:relative;padding:28px 32px;margin-bottom:28px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.07);border-radius:var(--radius-lg);
+  border-left:2px solid var(--danger);
+  backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
+  box-shadow:var(--shadow-md),inset 0 1px 0 rgba(255,255,255,.06);
+  animation:fadeUp .4s cubic-bezier(.2,.7,.2,1) both}
+.ledger-case::before{
+  content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.03),transparent 35%)}
+.ledger-case.is-fair{border-left-color:var(--lime)}
+.ledger-case.is-pending{border-left-color:rgba(255,255,255,.16)}
+[data-theme="light"] .ledger-case{
+  background:rgba(255,255,255,.7);border-color:rgba(0,0,0,.06);
+  box-shadow:0 6px 24px rgba(24,86,65,.08),inset 0 1px 0 rgba(255,255,255,.6)}
+[data-theme="light"] .ledger-case.is-fair{border-left-color:var(--green-brand)}
+[data-theme="light"] .ledger-case.is-pending{border-left-color:rgba(0,0,0,.12)}
+
+.ledger-case-body{
+  position:relative;z-index:1;
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center;
+  justify-items:center}
+/* Centered stack so the left column mirrors the OVER MSRP stamp on the
+   right — label at top, big number, dashed divider, meta caption — both
+   sides read as compact "stat block" cards. */
+.ledger-hero{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  text-align:center;min-width:0}
+.ledger-hero-label{
+  font-size:10px;letter-spacing:1.6px;font-weight:700;
+  color:var(--text-muted);text-transform:uppercase;font-family:'Inter',sans-serif;
+  margin-bottom:2px}
+.ledger-hero-value{
+  font-family:'Space Grotesk',sans-serif;font-size:46px;font-weight:800;
+  color:var(--danger);letter-spacing:-1.4px;line-height:1;
+  font-variant-numeric:tabular-nums;font-feature-settings:'tnum'}
+.ledger-hero.is-fair .ledger-hero-value{color:var(--lime)}
+[data-theme="light"] .ledger-hero.is-fair .ledger-hero-value{color:var(--green-brand)}
+.ledger-hero-divider{
+  border-bottom:1.5px dashed rgba(255,77,77,.32);
+  margin:6px 0 4px;width:220px;max-width:100%}
+.ledger-hero.is-fair .ledger-hero-divider{border-color:rgba(194,213,1,.32)}
+[data-theme="light"] .ledger-hero.is-fair .ledger-hero-divider{border-color:rgba(24,86,65,.32)}
+.ledger-hero-meta{
+  font-size:11.5px;color:var(--text-secondary);letter-spacing:.3px;
+  font-family:'Inter',sans-serif;
+  display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline}
+.ledger-hero-meta b{color:var(--text-muted);font-weight:700;letter-spacing:1px;font-size:10px}
+.ledger-hero-sep{margin:0 10px;opacity:.4}
+
+/* ── OVER MSRP stamp — uses --danger var; flips lime when fair.
+   Body type (label, date) stays in Inter; only the big % number
+   gets Space Grotesk per the headline-numbers convention. */
+.ledger-stamp-col{display:flex;align-items:center;justify-content:center}
+.ledger-stamp{
+  border:2.5px dashed var(--danger);border-radius:var(--radius);
+  padding:18px 26px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  transform:rotate(-4deg);color:var(--danger);
+  background:rgba(255,77,77,.04);min-width:200px;
+  font-family:'Inter',sans-serif;
+  animation:ledgerStampIn .55s cubic-bezier(.2,.7,.2,1) .2s both}
+.ledger-stamp.is-fair{border-color:var(--lime);color:var(--lime);background:rgba(194,213,1,.05)}
+[data-theme="light"] .ledger-stamp.is-fair{border-color:var(--green-brand);color:var(--green-brand);background:rgba(24,86,65,.05)}
+.ledger-stamp-top{font-size:11px;font-weight:800;letter-spacing:2px}
+.ledger-stamp-pct{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1;font-variant-numeric:tabular-nums}
+.ledger-stamp-date{font-size:10px;font-weight:700;letter-spacing:1.4px;opacity:.85;font-variant-numeric:tabular-nums}
+@keyframes ledgerStampIn{from{opacity:0;transform:rotate(-12deg) scale(.85)}to{opacity:1;transform:rotate(-4deg) scale(1)}}
+
+.ledger-case-footer{
+  position:relative;z-index:1;
+  display:flex;justify-content:center;align-items:center;
+  padding-top:18px;margin-top:24px;
+  border-top:1px solid rgba(255,255,255,.07);
+  gap:14px;flex-wrap:wrap}
+[data-theme="light"] .ledger-case-footer{border-color:rgba(0,0,0,.07)}
+.ledger-footer-label{
+  font-size:10px;letter-spacing:1.4px;font-weight:700;
+  color:var(--text-muted);text-transform:uppercase;font-family:'Inter',sans-serif}
+.ledger-arrow{margin-left:4px;opacity:.7}
+.ledger-footer-amount-wrap{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ledger-footer-value{
+  font-size:22px;font-weight:800;color:var(--danger);
+  font-family:'Space Grotesk',sans-serif;letter-spacing:-.3px;
+  font-variant-numeric:tabular-nums}
+.ledger-footer-unit{
+  font-size:11px;color:var(--text-muted);font-weight:600;
+  font-family:'Inter',sans-serif;letter-spacing:.2px}
+/* Inline cadence picker — hover/focus-driven dropdown sitting in the
+   "/ year at [picker] cadence" sentence. Adapted from a fill-on-hover
+   menu pattern: chevron rotates 180°, the trigger fills with the lime
+   accent (or green-brand on light theme), and submenu items get the
+   same scaleX fill on hover. Glass background on the submenu matches
+   the .custom-dropdown-menu used elsewhere in the tool. */
+.cadence-menu{display:inline-flex;font-size:11px;line-height:1;vertical-align:baseline}
+.cadence-item{position:relative;display:inline-block}
+.cadence-link{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  gap:6px;padding:6px 12px;border-radius:var(--radius);overflow:hidden;cursor:pointer;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+  color:var(--text-primary);font-family:inherit;font-size:inherit;line-height:1;
+  font-weight:700;letter-spacing:.2px;
+  transition:color .42s cubic-bezier(.23,1,.32,1),
+             border-color .42s cubic-bezier(.23,1,.32,1),
+             border-radius .42s cubic-bezier(.23,1,.32,1);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.cadence-link::after{
+  content:"";position:absolute;inset:0;background:var(--lime);
+  z-index:-1;transform:scaleX(0);transform-origin:left;
+  transition:transform .42s cubic-bezier(.23,1,.32,1)}
+.cadence-link svg{
+  width:9px;height:9px;fill:currentColor;
+  transition:transform .42s cubic-bezier(.23,1,.32,1)}
+.cadence-submenu{
+  display:flex;flex-direction:column;align-items:stretch;
+  position:absolute;top:100%;left:0;width:100%;min-width:110px;
+  border-radius:0 0 var(--radius) var(--radius);overflow:hidden;
+  background:rgba(16,20,30,.94);
+  backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
+  border:1px solid rgba(255,255,255,.1);border-top-color:transparent;
+  box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04) inset;
+  opacity:0;visibility:hidden;transform:translateY(-8px);
+  transition:opacity .42s cubic-bezier(.23,1,.32,1),
+             visibility .42s cubic-bezier(.23,1,.32,1),
+             transform .42s cubic-bezier(.23,1,.32,1),
+             border-color .42s cubic-bezier(.23,1,.32,1);
+  z-index:10;pointer-events:none}
+.cadence-item:hover .cadence-submenu,
+.cadence-item:focus-within .cadence-submenu{
+  opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto;
+  border-color:var(--lime)}
+.cadence-item:hover .cadence-link,
+.cadence-item:focus-within .cadence-link{
+  color:var(--bg-deep);border-color:var(--lime);
+  border-radius:var(--radius) var(--radius) 0 0}
+.cadence-item:hover .cadence-link::after,
+.cadence-item:focus-within .cadence-link::after{
+  transform:scaleX(1);transform-origin:right}
+.cadence-item:hover .cadence-link svg,
+.cadence-item:focus-within .cadence-link svg{
+  transform:rotate(-180deg)}
+.cadence-submenu-item{width:100%;border-bottom:1px solid rgba(255,255,255,.05)}
+.cadence-submenu-item:last-child{border-bottom:none}
+.cadence-submenu-link{
+  display:block;width:100%;padding:8px 16px;text-align:center;cursor:pointer;
+  position:relative;background:transparent;border:none;
+  color:var(--text-primary);font-family:inherit;font-size:11px;font-weight:600;
+  letter-spacing:.2px;line-height:1;overflow:hidden;
+  transition:color .42s cubic-bezier(.23,1,.32,1)}
+.cadence-submenu-link::before{
+  content:"";position:absolute;inset:0;background:var(--lime);z-index:-1;
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .42s cubic-bezier(.23,1,.32,1)}
+.cadence-submenu-link:hover,
+.cadence-submenu-link:focus-visible{color:var(--bg-deep);outline:none}
+.cadence-submenu-link:hover::before,
+.cadence-submenu-link:focus-visible::before{transform:scaleX(1);transform-origin:right}
+.cadence-submenu-link.is-selected{color:var(--lime);font-weight:700}
+.cadence-submenu-link.is-selected:hover,
+.cadence-submenu-link.is-selected:focus-visible{color:var(--bg-deep)}
+
+/* Light theme — swap lime for the forest-green brand color */
+[data-theme="light"] .cadence-link{
+  background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.1)}
+[data-theme="light"] .cadence-link::after{background:var(--green-brand)}
+[data-theme="light"] .cadence-submenu{
+  background:rgba(255,255,255,.96);border-color:rgba(0,0,0,.08);
+  box-shadow:0 12px 40px rgba(24,86,65,.18),0 0 0 1px rgba(0,0,0,.04) inset}
+[data-theme="light"] .cadence-item:hover .cadence-link,
+[data-theme="light"] .cadence-item:focus-within .cadence-link{
+  color:#fff;border-color:var(--green-brand)}
+[data-theme="light"] .cadence-item:hover .cadence-submenu,
+[data-theme="light"] .cadence-item:focus-within .cadence-submenu{
+  border-color:var(--green-brand)}
+[data-theme="light"] .cadence-submenu-item{border-bottom-color:rgba(0,0,0,.06)}
+[data-theme="light"] .cadence-submenu-link{color:var(--text-primary)}
+[data-theme="light"] .cadence-submenu-link::before{background:var(--green-brand)}
+[data-theme="light"] .cadence-submenu-link:hover,
+[data-theme="light"] .cadence-submenu-link:focus-visible{color:#fff}
+[data-theme="light"] .cadence-submenu-link.is-selected{color:var(--green-brand)}
+[data-theme="light"] .cadence-submenu-link.is-selected:hover,
+[data-theme="light"] .cadence-submenu-link.is-selected:focus-visible{color:#fff}
+
+/* ── The Proof — section header + italicized subheader + table.
+   Header matches the .scan-title pattern (Inter, weight 800, with a
+   lime-accent icon, centered). The line below is a small italic
+   subheader for editorial voice. */
+.ledger-proof{margin-bottom:28px;text-align:center}
+.ledger-proof-eyebrow-row{
+  display:flex;justify-content:center;align-items:center;
+  gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.ledger-proof-tag{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  font-family:'Inter',sans-serif;font-size:30px;font-weight:800;
+  color:var(--text-primary);letter-spacing:-.5px;line-height:1.15}
+.ledger-proof-tag svg{color:var(--lime);flex-shrink:0}
+[data-theme="light"] .ledger-proof-tag svg{color:var(--green-brand)}
+.ledger-proof-title{
+  font-family:'Inter',sans-serif;font-size:15px;
+  font-weight:500;color:var(--text-secondary);font-style:italic;
+  letter-spacing:.1px;line-height:1.5;margin:0 0 22px;text-align:center}
+
+.ledger-table-card{
+  position:relative;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.07);border-radius:var(--radius-lg);
+  padding:20px 24px 8px;
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+  box-shadow:var(--shadow-md),inset 0 1px 0 rgba(255,255,255,.05);
+  animation:fadeUp .4s cubic-bezier(.2,.7,.2,1) .05s both}
+[data-theme="light"] .ledger-table-card{
+  background:rgba(255,255,255,.7);border-color:rgba(0,0,0,.06);
+  box-shadow:0 4px 16px rgba(24,86,65,.06),inset 0 1px 0 rgba(255,255,255,.6)}
+.ledger-table-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ledger-table-label{
+  font-size:10px;font-weight:700;letter-spacing:1.6px;
+  color:var(--text-muted);text-transform:uppercase;font-family:'Inter',sans-serif}
+.ledger-table-pills{display:flex;gap:6px}
+.ledger-pill{
+  font-size:10px;font-weight:700;letter-spacing:1.2px;
+  padding:4px 10px;border-radius:50px;text-transform:uppercase;
+  font-family:'Inter',sans-serif}
+.ledger-pill-red{
+  color:var(--danger);background:var(--danger-glow);
+  border:1px solid rgba(255,77,77,.32)}
+.ledger-pill-green{
+  color:var(--lime);background:var(--lime-soft);
+  border:1px solid rgba(194,213,1,.3)}
+[data-theme="light"] .ledger-pill-green{
+  color:var(--green-brand);background:rgba(24,86,65,.08);border-color:rgba(24,86,65,.3)}
+.ledger-table-sub{
+  font-size:13px;color:var(--text-secondary);font-style:italic;
+  letter-spacing:.2px;margin:6px 0 14px;font-family:'Inter',sans-serif}
+
+.ledger-table-scroll{overflow-x:auto;margin:0 -24px;padding:0 24px}
+.ledger-table{
+  width:100%;border-collapse:collapse;
+  font-family:'Inter',sans-serif;font-size:13px;min-width:520px}
+.ledger-table th{
+  font-size:10px;letter-spacing:1.4px;font-weight:700;
+  color:var(--text-muted);text-transform:uppercase;
+  text-align:left;padding:10px 8px;
+  border-bottom:1px solid rgba(255,255,255,.08)}
+[data-theme="light"] .ledger-table th{border-color:rgba(0,0,0,.08)}
+.ledger-table th.num{text-align:right}
+.ledger-table tbody tr{transition:background-color .15s ease}
+.ledger-table tbody tr:hover{background:rgba(255,255,255,.02)}
+[data-theme="light"] .ledger-table tbody tr:hover{background:rgba(0,0,0,.02)}
+.ledger-table td{
+  padding:14px 8px;border-bottom:1px solid rgba(255,255,255,.05);
+  vertical-align:middle}
+[data-theme="light"] .ledger-table td{border-color:rgba(0,0,0,.06)}
+.ledger-table tbody tr:last-child td{border-bottom:none}
+.ledger-table td.num{
+  text-align:right;font-variant-numeric:tabular-nums;
+  font-feature-settings:'tnum';color:var(--text-primary)}
+.ledger-item-name{font-weight:600;color:var(--text-primary);font-size:13px;line-height:1.3;letter-spacing:-.1px}
+.ledger-item-part{font-size:11px;color:var(--text-muted);letter-spacing:.4px;margin-top:3px;font-feature-settings:'tnum'}
+
+.ledger-markup-pill{
+  display:inline-block;font-weight:800;font-size:12px;
+  padding:5px 11px;border-radius:50px;
+  font-variant-numeric:tabular-nums;letter-spacing:.1px;
+  font-family:'Inter',sans-serif}
+.ledger-markup-red{
+  color:var(--danger);background:var(--danger-glow);
+  border:1px solid rgba(255,77,77,.3)}
+.ledger-markup-fair{
+  color:var(--lime);background:var(--lime-soft);
+  border:1px solid rgba(194,213,1,.28)}
+[data-theme="light"] .ledger-markup-fair{
+  color:var(--green-brand);background:rgba(24,86,65,.08);border-color:rgba(24,86,65,.28)}
+.ledger-at-msrp{color:var(--text-muted);font-style:italic;font-size:12px}
+
+.ledger-total-row td{
+  border-top:2px solid rgba(255,255,255,.14)!important;
+  padding-top:18px;padding-bottom:14px;font-size:14px;
+  font-weight:800;color:var(--text-primary);
+  font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;
+  letter-spacing:.1px}
+[data-theme="light"] .ledger-total-row td{border-top-color:rgba(0,0,0,.14)!important}
+.ledger-total-msrp{color:var(--lime)!important;font-weight:800}
+[data-theme="light"] .ledger-total-msrp{color:var(--green-brand)!important}
+.ledger-total-markup-pill{
+  display:inline-block;background:var(--danger);color:#fff;
+  padding:6px 14px;border-radius:50px;font-weight:800;
+  font-family:'Inter',sans-serif;letter-spacing:.1px;
+  font-variant-numeric:tabular-nums;
+  box-shadow:0 2px 12px rgba(255,77,77,.25)}
+.ledger-total-markup-pill.is-fair{
+  background:var(--lime);color:var(--bg-deep);
+  box-shadow:0 2px 12px rgba(194,213,1,.25)}
+[data-theme="light"] .ledger-total-markup-pill.is-fair{
+  background:var(--green-brand);color:#fff;box-shadow:0 2px 12px rgba(24,86,65,.25)}
+
+/* ── Quote capture form — mirrors the scan-cta gradient feel
+   but with the in-app form inputs the rest of the tool uses. */
+.ledger-quote{
+  position:relative;
+  padding:24px 28px;margin-bottom:24px;
+  background:linear-gradient(135deg,rgba(194,213,1,.08),rgba(59,130,246,.03));
+  border:1px solid rgba(194,213,1,.22);border-radius:var(--radius-lg);
+  backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
+  box-shadow:var(--shadow-md),inset 0 1px 0 rgba(255,255,255,.05);
+  animation:fadeUp .4s cubic-bezier(.2,.7,.2,1) .1s both;overflow:hidden}
+.ledger-quote::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 50% 60% at 100% 50%,rgba(194,213,1,.1),transparent 60%)}
+[data-theme="light"] .ledger-quote{
+  background:linear-gradient(135deg,rgba(24,86,65,.06),rgba(59,130,246,.02));
+  border-color:rgba(24,86,65,.2);
+  box-shadow:0 4px 16px rgba(24,86,65,.06),inset 0 1px 0 rgba(255,255,255,.6)}
+[data-theme="light"] .ledger-quote::before{
+  background:radial-gradient(ellipse 50% 60% at 100% 50%,rgba(24,86,65,.08),transparent 60%)}
+.ledger-quote-eyebrow{
+  position:relative;z-index:1;
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:'Inter',sans-serif;font-size:26px;font-weight:800;
+  color:var(--text-primary);letter-spacing:-.4px;line-height:1.15;
+  margin-bottom:6px}
+.ledger-quote-eyebrow svg{color:var(--lime);flex-shrink:0}
+[data-theme="light"] .ledger-quote-eyebrow svg{color:var(--green-brand)}
+.ledger-quote-title{
+  position:relative;z-index:1;
+  font-family:'Inter',sans-serif;font-size:15px;
+  font-weight:500;color:var(--text-secondary);font-style:italic;
+  letter-spacing:.1px;line-height:1.5;margin:0 0 4px;max-width:88%}
+.ledger-quote-form{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;gap:12px;margin-top:18px}
+/* Email/Phone toggle tabs — matches the email-gate's tab pattern. */
+.ledger-quote-tabs{
+  display:flex;gap:4px;padding:4px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--radius);align-self:stretch}
+[data-theme="light"] .ledger-quote-tabs{
+  background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08)}
+.ledger-quote-tab{
+  flex:1;padding:9px 12px;font-size:13px;font-weight:700;letter-spacing:.3px;
+  font-family:'Inter',sans-serif;background:transparent;border:none;
+  border-radius:calc(var(--radius) - 4px);color:var(--text-muted);
+  cursor:pointer;transition:var(--transition)}
+.ledger-quote-tab:hover{color:var(--text-primary);background:rgba(255,255,255,.04)}
+[data-theme="light"] .ledger-quote-tab:hover{background:rgba(0,0,0,.04)}
+.ledger-quote-tab.is-active{
+  background:var(--lime-soft);color:var(--lime);
+  box-shadow:0 0 0 1px rgba(194,213,1,.22) inset}
+[data-theme="light"] .ledger-quote-tab.is-active{
+  background:rgba(24,86,65,.08);color:var(--green-brand);
+  box-shadow:0 0 0 1px rgba(24,86,65,.22) inset}
+.ledger-input{
+  width:100%;padding:11px 14px;font-size:14px;
+  font-family:'Inter',sans-serif;color:var(--text-primary);
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--radius);outline:none;
+  transition:var(--transition);box-sizing:border-box;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+[data-theme="light"] .ledger-input{
+  background:rgba(255,255,255,.6);border-color:rgba(0,0,0,.08)}
+.ledger-input:focus{
+  border-color:var(--lime);
+  background:rgba(255,255,255,.08);
+  box-shadow:0 0 0 3px var(--lime-soft)}
+[data-theme="light"] .ledger-input:focus{
+  border-color:var(--green-brand);
+  background:rgba(255,255,255,.85);
+  box-shadow:0 0 0 3px rgba(24,86,65,.1)}
+.ledger-input.error{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-glow)}
+.ledger-quote-error{font-size:12px;font-weight:600;color:var(--danger);min-height:0;letter-spacing:.2px}
+.ledger-quote-error:empty{display:none}
+.ledger-quote-submit{
+  align-self:flex-start;
+  background:var(--lime);color:var(--bg-deep);
+  border:none;border-radius:var(--radius);padding:12px 22px;
+  font-size:14px;font-weight:700;letter-spacing:.3px;cursor:pointer;
+  transition:var(--transition);font-family:'Inter',sans-serif;
+  box-shadow:0 4px 20px rgba(194,213,1,.22),0 0 36px rgba(194,213,1,.08)}
+[data-theme="light"] .ledger-quote-submit{
+  background:var(--green-brand);color:#fff;
+  box-shadow:0 4px 20px rgba(24,86,65,.22)}
+.ledger-quote-submit:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 28px rgba(194,213,1,.34),0 0 48px rgba(194,213,1,.14)}
+[data-theme="light"] .ledger-quote-submit:hover{box-shadow:0 8px 28px rgba(24,86,65,.32)}
+.ledger-quote-submit:active{transform:translateY(1px)}
+.ledger-quote-success{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;background:var(--lime-soft);
+  border:1px solid rgba(194,213,1,.3);border-radius:var(--radius);
+  font-size:13.5px;color:var(--text-primary);line-height:1.5}
+/* The HTML `hidden` attribute defaults to display:none via the UA
+   stylesheet, but our display:flex above wins specificity, so explicitly
+   restore the hide behavior. */
+.ledger-quote-success[hidden]{display:none}
+.ledger-quote-success svg{flex-shrink:0;color:var(--lime)}
+[data-theme="light"] .ledger-quote-success{
+  background:rgba(24,86,65,.06);border-color:rgba(24,86,65,.3)}
+[data-theme="light"] .ledger-quote-success svg{color:var(--green-brand)}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media (max-width:680px){
+  .ledger-case{padding:20px 18px}
+  .ledger-case-body{grid-template-columns:1fr;gap:24px}
+  .ledger-stamp-col{justify-self:center}
+  .ledger-hero-value{font-size:38px}
+  .ledger-stamp-pct{font-size:30px}
+  .ledger-quote{padding:20px 18px}
+  .ledger-quote-eyebrow{font-size:22px}
+  .ledger-quote-title{max-width:100%}
+  .ledger-proof-tag{font-size:24px}
+  .ledger-table-card{padding:16px 18px 6px}
+  .ledger-table-scroll{margin:0 -18px;padding:0 18px}
+}
 
 /* ── Action row at the bottom ── */
 .scan-actions-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;justify-content:center}
@@ -1381,14 +1812,131 @@ mark{background:rgba(194,213,1,.35);border-radius:2px;padding:0 2px;color:inheri
         <button class="scan-skip" id="scan-results-skip-edit" style="display:block;margin:10px auto 0">Browse catalog manually</button>
       </div>
 
-      <!-- ── SUMMARY SUB-VIEW ──────────────────────────────────── -->
+      <!-- ── SUMMARY SUB-VIEW ──────────────────────────────────────
+           "Ledger stamp" pricing-summary report. Visual structure:
+             1. Eyebrow breadcrumb
+             2. Case-file card with the headline finding, hidden-markup
+                hero, OVER MSRP stamp, and projected annual leak footer
+             3. "The Proof" section with the line-item reconciliation table
+             4. "Get your fair-price quote" capture form
+           Theme-aware: dark uses lime accents, light uses forest green.
+           Reds for inflation/markup signal; greens for verified MSRP. -->
       <div class="scan-results-summary-view" id="scan-results-summary-view" style="display:none">
-        <h2 class="scan-title">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          Your Pricing Summary
-        </h2>
-        <div class="scan-totals" id="scan-totals" style="display:none"></div>
-        <div class="scan-cta" id="scan-cta" style="display:none"></div>
+        <div class="ledger-eyebrow">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Pricing Summary
+        </div>
+
+        <!-- ── Hero card: finding + hidden markup + OVER MSRP stamp ─ -->
+        <section class="ledger-case">
+          <div class="ledger-case-body">
+            <div class="ledger-hero">
+              <div class="ledger-hero-label">HIDDEN MARKUP</div>
+              <div class="ledger-hero-value" id="ledger-markup-amount">&mdash;</div>
+              <div class="ledger-hero-divider"></div>
+              <div class="ledger-hero-meta">
+                <span><b>STATED:</b> <span id="ledger-stated">&mdash;</span></span>
+                <span class="ledger-hero-sep">&middot;</span>
+                <span><b>ACTUAL:</b> <span id="ledger-actual">&mdash;</span></span>
+              </div>
+            </div>
+            <div class="ledger-stamp-col">
+              <div class="ledger-stamp" id="ledger-stamp">
+                <div class="ledger-stamp-top">OVER MSRP</div>
+                <div class="ledger-stamp-pct" id="ledger-stamp-pct">+0%</div>
+                <div class="ledger-stamp-date" id="ledger-stamp-date">&mdash;</div>
+              </div>
+            </div>
+          </div>
+          <div class="ledger-case-footer">
+            <span class="ledger-footer-label">PROJECTED ANNUAL LEAK <span class="ledger-arrow">&#9656;</span></span>
+            <span class="ledger-footer-amount-wrap">
+              <span class="ledger-footer-value" id="ledger-annual-leak">&mdash;</span>
+              <span class="ledger-footer-unit">&#47; year at
+                <span class="cadence-menu">
+                  <span class="cadence-item">
+                    <button type="button" class="cadence-link" id="cadence-trigger" data-mult="12" aria-haspopup="menu" aria-expanded="false">
+                      <span class="cadence-label">monthly</span>
+                      <svg viewBox="0 0 360 360" aria-hidden="true"><path d="M325.607,79.393c-5.857-5.857-15.355-5.858-21.213,0.001l-139.39,139.393L25.607,79.393 c-5.857-5.857-15.355-5.858-21.213,0.001c-5.858,5.858-5.858,15.355,0,21.213l150.004,150c2.813,2.813,6.628,4.393,10.606,4.393 s7.794-1.581,10.606-4.394l149.996-150C331.465,94.749,331.465,85.251,325.607,79.393z"/></svg>
+                    </button>
+                    <div class="cadence-submenu" role="menu" aria-label="Reorder cadence">
+                      <div class="cadence-submenu-item"><button type="button" class="cadence-submenu-link" role="menuitem" data-mult="52">weekly</button></div>
+                      <div class="cadence-submenu-item"><button type="button" class="cadence-submenu-link is-selected" role="menuitem" data-mult="12">monthly</button></div>
+                      <div class="cadence-submenu-item"><button type="button" class="cadence-submenu-link" role="menuitem" data-mult="4">quarterly</button></div>
+                      <div class="cadence-submenu-item"><button type="button" class="cadence-submenu-link" role="menuitem" data-mult="1">yearly</button></div>
+                    </div>
+                  </span>
+                </span> cadence</span>
+            </span>
+          </div>
+        </section>
+
+        <!-- ── The Proof ────────────────────────────────────── -->
+        <section class="ledger-proof">
+          <div class="ledger-proof-eyebrow-row">
+            <span class="ledger-proof-tag">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+              The Proof
+            </span>
+          </div>
+          <h3 class="ledger-proof-title">Same list. Two prices.</h3>
+
+          <div class="ledger-table-card">
+            <div class="ledger-table-top">
+              <div class="ledger-table-label">LINE-ITEM RECONCILIATION</div>
+              <div class="ledger-table-pills">
+                <span class="ledger-pill ledger-pill-red">INFLATED</span>
+                <span class="ledger-pill ledger-pill-green">VERIFIED</span>
+              </div>
+            </div>
+            <div class="ledger-table-sub">Supplier list vs. manufacturer MSRP</div>
+
+            <div class="ledger-table-scroll">
+              <table class="ledger-table">
+                <thead>
+                  <tr>
+                    <th class="lt-item">ITEM</th>
+                    <th class="num">SUPPLIER LIST</th>
+                    <th class="num">MSRP</th>
+                    <th class="num">MARKUP</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-tbody"></tbody>
+                <tfoot>
+                  <tr class="ledger-total-row">
+                    <td><b>TOTAL</b></td>
+                    <td class="num" id="ledger-total-supp">&mdash;</td>
+                    <td class="num ledger-total-msrp" id="ledger-total-msrp">&mdash;</td>
+                    <td class="num"><span class="ledger-total-markup-pill" id="ledger-total-markup">&mdash;</span></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── Quote capture ───────────────────────────────── -->
+        <section class="ledger-quote">
+          <div class="ledger-quote-eyebrow">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Get Your Fair-Price Quote
+          </div>
+          <h3 class="ledger-quote-title">Pick how you'd like to be contacted &mdash; we'll get back to you within one business hour.</h3>
+          <form class="ledger-quote-form" id="ledger-quote-form" novalidate>
+            <div class="ledger-quote-tabs" role="tablist" aria-label="Contact method">
+              <button type="button" class="ledger-quote-tab is-active" data-mode="email" role="tab" aria-selected="true">Email</button>
+              <button type="button" class="ledger-quote-tab" data-mode="phone" role="tab" aria-selected="false">Phone</button>
+            </div>
+            <input type="email" class="ledger-input" id="ledger-quote-contact" placeholder="you@yourshop.com" autocomplete="email" inputmode="email" aria-label="Email address" required>
+            <div class="ledger-quote-error" id="ledger-quote-error" aria-live="polite"></div>
+            <button type="submit" class="ledger-quote-submit" id="ledger-quote-submit">Request Fair-Price Quote &rarr;</button>
+            <div class="ledger-quote-success" id="ledger-quote-success" hidden>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Got it &mdash; an Industrial Finishes rep will follow up at <b id="ledger-quote-success-contact"></b> within one business hour.
+            </div>
+          </form>
+        </section>
+
         <div class="scan-actions-row">
           <button class="scan-btn scan-btn-secondary" id="scan-back-edit">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -2952,11 +3500,13 @@ function renderScanResults() {
     syncScanResultsToSelected();
     recalcScanCard(idx);
     recalcScanTotals();
+    renderLedgerSummary();
   });
 
   // Initial calc fill so cards aren't blank when the page first appears
   matched.forEach(r => recalcScanCard(scanResults.indexOf(r)));
   recalcScanTotals();
+  renderLedgerSummary();
 }
 
 /* Scan-page calc helpers — per-card markup analysis and the top-of-page
@@ -3115,6 +3665,155 @@ function recalcScanCard(idx) {
   supEl.className   = 'sp-price-val';
   inflEl.textContent = '—';
   inflEl.className   = 'sp-price-val';
+}
+
+/* ── Ledger summary renderer ──────────────────────────────
+   Computes the same totals/markup math as the (now-retired)
+   scan-totals banner, but writes them into the summary view's
+   hero card, OVER MSRP stamp, line-item table, and projected
+   annual leak. Safe to call freely — no-ops when the summary
+   DOM isn't present (e.g. on the edit sub-view). */
+function _ledgerToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+function renderLedgerSummary() {
+  const tbody = document.getElementById('ledger-tbody');
+  if (!tbody) return; // Summary view not in DOM (different state)
+
+  // Pre-fill the quote contact field from any captured email — the gate
+  // may have collected it earlier for compare/scan/export. The form opens
+  // in email mode by default, so we only pre-fill when that's still active
+  // and the user hasn't typed anything yet.
+  const quoteContactEl = document.getElementById('ledger-quote-contact');
+  if (quoteContactEl && !quoteContactEl.value && !quoteContactEl.dataset.prefilled
+      && quoteContactEl.type === 'email') {
+    try {
+      const stored = localStorage.getItem(EMAIL_KEY);
+      if (stored) quoteContactEl.value = stored;
+    } catch (e) {}
+    quoteContactEl.dataset.prefilled = '1';
+  }
+
+  const matched = scanResults.filter(r => r.matched && r.calc);
+
+  // ── Aggregate totals (same math as the old recalcScanTotals) ──
+  let msrpTotal = 0, youPayTotal = 0, suppListTotal = 0;
+  let hasInput = false, hasDisc = false;
+  matched.forEach(r => {
+    msrpTotal += r.catalog.price * r.calc.qty;
+    if (r.calc.youPay > 0) {
+      hasInput = true;
+      youPayTotal += r.calc.youPay * r.calc.qty;
+      if (r.calc.disc > 0) {
+        hasDisc = true;
+        suppListTotal += (r.calc.youPay / (1 - r.calc.disc / 100)) * r.calc.qty;
+      }
+    }
+  });
+  const markupTotal     = suppListTotal > 0 ? suppListTotal - msrpTotal : 0;
+  const realOverallDisc = (hasInput && msrpTotal > 0) ? ((msrpTotal - youPayTotal) / msrpTotal) * 100 : 0;
+  const weightedStated  = suppListTotal > 0 ? ((suppListTotal - youPayTotal) / suppListTotal) * 100 : 0;
+  const gapPct          = weightedStated - realOverallDisc;
+  const isOverMsrp      = markupTotal > 0.5;
+  const isFair          = hasInput && !isOverMsrp;
+
+  // ── Today's date for the OVER MSRP stamp ────────────────
+  const today = _ledgerToday();
+  const $ = id => document.getElementById(id);
+  if ($('ledger-stamp-date')) $('ledger-stamp-date').textContent = today;
+
+  // ── Verdict state on the case-file card itself, mirroring the
+  //    scan-card verdict-* pattern: red left-border for over-MSRP,
+  //    lime/green for fair, neutral for pending. The .ledger-hero
+  //    + .ledger-stamp + .ledger-total-markup-pill all toggle
+  //    .is-fair off the same boolean.
+  const caseEl = document.querySelector('.ledger-case');
+  if (caseEl) {
+    caseEl.classList.toggle('is-fair', isFair);
+    caseEl.classList.toggle('is-pending', !hasInput && matched.length > 0);
+  }
+
+  // ── Hidden markup hero + supporting numbers ─────────────
+  const hero = document.querySelector('.ledger-hero');
+  if (hero) hero.classList.toggle('is-fair', isFair);
+  if ($('ledger-markup-amount')) {
+    $('ledger-markup-amount').textContent = isOverMsrp
+      ? '+' + fmt(markupTotal)
+      : (hasInput ? fmt(markupTotal) : '—');
+  }
+  if ($('ledger-stated')) $('ledger-stated').textContent = hasDisc  ? weightedStated.toFixed(2) + '% off' : '—';
+  if ($('ledger-actual')) $('ledger-actual').textContent = hasInput ? realOverallDisc.toFixed(2) + '% off' : '—';
+
+  // ── OVER MSRP stamp — flips to "VERIFIED" when no markup ─
+  const stamp = $('ledger-stamp');
+  const stampPctEl = $('ledger-stamp-pct');
+  if (stamp) {
+    stamp.classList.toggle('is-fair', isFair);
+    const top = stamp.querySelector('.ledger-stamp-top');
+    if (top) top.textContent = isOverMsrp ? 'OVER MSRP' : (isFair ? 'VERIFIED' : 'PENDING');
+  }
+  if (stampPctEl) {
+    if (isOverMsrp) stampPctEl.textContent = '+' + gapPct.toFixed(1) + '%';
+    else if (isFair) stampPctEl.textContent = '✓';
+    else stampPctEl.textContent = '—';
+  }
+
+  // ── Annual leak (cadence-driven) ─────────────────────────
+  // The cadence picker is now a custom hover dropdown — the chosen
+  // multiplier rides on the trigger button's data-mult attribute.
+  const cadenceTrigger = $('cadence-trigger');
+  const cadenceMult    = cadenceTrigger ? (parseFloat(cadenceTrigger.dataset.mult) || 12) : 12;
+  if ($('ledger-annual-leak')) {
+    $('ledger-annual-leak').textContent = isOverMsrp ? fmt(markupTotal * cadenceMult) : '—';
+  }
+
+  // ── Line-item reconciliation table ───────────────────────
+  let rowsHtml = '';
+  matched.forEach(r => {
+    const qty       = r.calc.qty;
+    const lineMsrp  = r.catalog.price * qty;
+    const hasLineDisc = r.calc.youPay > 0 && r.calc.disc > 0;
+    const lineSupp  = hasLineDisc
+      ? (r.calc.youPay / (1 - r.calc.disc / 100)) * qty
+      : null;
+    const lineMarkup = lineSupp !== null ? lineSupp - lineMsrp : null;
+
+    let markupCell;
+    if (lineMarkup === null) {
+      markupCell = '<span class="ledger-at-msrp">—</span>';
+    } else if (lineMarkup > 0.5) {
+      markupCell = '<span class="ledger-markup-pill ledger-markup-red">+' + fmt(lineMarkup) + '</span>';
+    } else if (lineMarkup < -0.5) {
+      markupCell = '<span class="ledger-markup-pill ledger-markup-fair">' + fmt(lineMarkup) + '</span>';
+    } else {
+      markupCell = '<span class="ledger-at-msrp">at MSRP</span>';
+    }
+
+    const partLine = esc(r.catalog.part || '') + (r.catalog.size ? ' · ' + esc(r.catalog.size) : '');
+    rowsHtml += '<tr>' +
+      '<td><div class="ledger-item-name">' + esc(r.catalog.desc) + '</div>' +
+        '<div class="ledger-item-part">' + partLine + '</div></td>' +
+      '<td class="num">' + (lineSupp !== null ? fmt(lineSupp) : '—') + '</td>' +
+      '<td class="num">' + fmt(lineMsrp) + '</td>' +
+      '<td class="num">' + markupCell + '</td>' +
+    '</tr>';
+  });
+  tbody.innerHTML = rowsHtml || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px 0;font-style:italic">No matched items.</td></tr>';
+
+  // ── Totals row ──────────────────────────────────────────
+  if ($('ledger-total-supp'))   $('ledger-total-supp').textContent = suppListTotal > 0 ? fmt(suppListTotal) : '—';
+  if ($('ledger-total-msrp'))   $('ledger-total-msrp').textContent = fmt(msrpTotal);
+  const totalMarkupEl = $('ledger-total-markup');
+  if (totalMarkupEl) {
+    totalMarkupEl.classList.toggle('is-fair', isFair && !isOverMsrp);
+    if (isOverMsrp)        totalMarkupEl.textContent = '+' + fmt(markupTotal);
+    else if (isFair)       totalMarkupEl.textContent = 'at MSRP';
+    else                   totalMarkupEl.textContent = '—';
+  }
 }
 
 function recalcScanTotals() {
@@ -3506,6 +4205,7 @@ function initScanScreen() {
     // editing, and the very first render also calls it. This is just
     // belt-and-suspenders.
     recalcScanTotals();
+    renderLedgerSummary();
     showResultsSubView('summary');
     // Scroll to the top of the summary view so the headline card is in view.
     const screen = document.getElementById('scan-screen');
@@ -3529,6 +4229,32 @@ function initScanScreen() {
   // sub-view) clear results and return to the upload screen.
   function rescanReset() {
     scanResults = [];
+    // Reset the ledger quote form so a fresh scan doesn't carry over the
+    // success state, disabled inputs, or stale phone-mode state from the
+    // prior submission. Default back to email mode + a clean input.
+    const successEl = document.getElementById('ledger-quote-success');
+    const submitBtn = document.getElementById('ledger-quote-submit');
+    const contactEl = document.getElementById('ledger-quote-contact');
+    if (contactEl) {
+      contactEl.disabled = false;
+      contactEl.value = '';
+      contactEl.classList.remove('error');
+      delete contactEl.dataset.prefilled;
+      contactEl.type = 'email';
+      contactEl.placeholder = 'you@yourshop.com';
+      contactEl.autocomplete = 'email';
+      contactEl.setAttribute('inputmode', 'email');
+      contactEl.setAttribute('aria-label', 'Email address');
+    }
+    document.querySelectorAll('.ledger-quote-tab').forEach(t => {
+      t.disabled = false;
+      const isEmail = t.dataset.mode === 'email';
+      t.classList.toggle('is-active', isEmail);
+      t.setAttribute('aria-selected', isEmail ? 'true' : 'false');
+    });
+    if (submitBtn) submitBtn.style.display = '';
+    if (successEl) successEl.hidden = true;
+
     showResultsSubView('edit'); // reset sub-view so next results land on edit
     showScanState('scan-upload');
     document.getElementById('scan-capture').value = '';
@@ -3547,6 +4273,139 @@ function initScanScreen() {
     }
     document.getElementById('sp-export').click();
   });
+
+  // ── Ledger summary: cadence dropdown drives the projected annual leak.
+  //    The custom hover-menu fires a click on a .cadence-submenu-link; we
+  //    update the trigger's label + data-mult, mark the picked option as
+  //    .is-selected, force-close the submenu by blurring focus, and
+  //    re-render so the leak figure reflects the new multiplier.
+  const cadenceMenu = document.querySelector('.cadence-menu');
+  if (cadenceMenu) {
+    cadenceMenu.addEventListener('click', function(e) {
+      const link = e.target.closest('.cadence-submenu-link');
+      if (!link) return;
+      e.preventDefault();
+      const trigger = document.getElementById('cadence-trigger');
+      if (trigger) {
+        trigger.dataset.mult = link.dataset.mult || '12';
+        const labelEl = trigger.querySelector('.cadence-label');
+        if (labelEl) labelEl.textContent = link.textContent.trim();
+      }
+      cadenceMenu.querySelectorAll('.cadence-submenu-link').forEach(l => {
+        l.classList.toggle('is-selected', l === link);
+      });
+      // Drop focus so :focus-within releases and the submenu closes.
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      renderLedgerSummary();
+    });
+  }
+
+  // ── Ledger quote form submit — captures email + cadence + notes via
+  //    api-email.php (fire-and-forget). The trigger is logged as 'quote'
+  //    so the leads.csv tells us this was a fair-price-quote request, not
+  //    just a gate capture.
+  const quoteForm = document.getElementById('ledger-quote-form');
+  if (quoteForm) {
+    let _quoteMode = 'email'; // 'email' | 'phone'
+
+    function setQuoteMode(mode) {
+      if (mode !== 'email' && mode !== 'phone') mode = 'email';
+      _quoteMode = mode;
+      const tabs  = quoteForm.querySelectorAll('.ledger-quote-tab');
+      const input = document.getElementById('ledger-quote-contact');
+      const errEl = document.getElementById('ledger-quote-error');
+      tabs.forEach(t => {
+        const active = t.dataset.mode === mode;
+        t.classList.toggle('is-active', active);
+        t.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      if (mode === 'phone') {
+        input.type = 'tel';
+        input.placeholder = '(555) 123-4567';
+        input.autocomplete = 'tel';
+        input.setAttribute('inputmode', 'tel');
+        input.setAttribute('aria-label', 'Phone number');
+      } else {
+        input.type = 'email';
+        input.placeholder = 'you@yourshop.com';
+        input.autocomplete = 'email';
+        input.setAttribute('inputmode', 'email');
+        input.setAttribute('aria-label', 'Email address');
+      }
+      input.value = '';
+      input.classList.remove('error');
+      if (errEl) errEl.textContent = '';
+    }
+
+    // Tab click → swap mode
+    quoteForm.querySelectorAll('.ledger-quote-tab').forEach(tab => {
+      tab.addEventListener('click', () => setQuoteMode(tab.dataset.mode));
+    });
+
+    quoteForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const input     = document.getElementById('ledger-quote-contact');
+      const errEl     = document.getElementById('ledger-quote-error');
+      const successEl = document.getElementById('ledger-quote-success');
+      const submitBtn = document.getElementById('ledger-quote-submit');
+      const tabs      = quoteForm.querySelectorAll('.ledger-quote-tab');
+      const raw       = (input.value || '').trim();
+
+      let valid, errMsg, payload;
+      if (_quoteMode === 'phone') {
+        valid = isValidPhone(raw);
+        errMsg = !raw
+          ? 'Enter your phone number so we can call you back.'
+          : 'Enter a valid phone number (10–15 digits).';
+        payload = { field: 'phone', value: normalizePhone(raw), display: raw };
+      } else {
+        valid = isValidEmail(raw);
+        errMsg = !raw
+          ? 'Enter your work email so we can send the quote.'
+          : 'Enter a valid email address (e.g. you@yourshop.com).';
+        payload = { field: 'email', value: raw, display: raw };
+      }
+
+      if (!valid) {
+        input.classList.add('error');
+        if (errEl) errEl.textContent = errMsg;
+        input.focus();
+        return;
+      }
+
+      // Fire-and-forget — never block UX on the network.
+      try {
+        const fd = new FormData();
+        fd.append(payload.field, payload.value);
+        fd.append('trigger', 'quote');
+        fetch(EMAIL_API_URL, { method: 'POST', body: fd, keepalive: true }).catch(() => {});
+        // Cache locally so the email gate doesn't re-prompt next session.
+        try {
+          if (payload.field === 'phone') localStorage.setItem(PHONE_KEY, payload.value);
+          else                            localStorage.setItem(EMAIL_KEY, payload.value);
+        } catch (err) {}
+      } catch (err) {}
+
+      // Lock the form into the success state.
+      input.disabled = true;
+      tabs.forEach(t => { t.disabled = true; });
+      if (submitBtn) submitBtn.style.display = 'none';
+      if (errEl) errEl.textContent = '';
+      const successContact = document.getElementById('ledger-quote-success-contact');
+      if (successContact) successContact.textContent = payload.display;
+      if (successEl) successEl.hidden = false;
+    });
+
+    // Clear the error border + message on input
+    const input = document.getElementById('ledger-quote-contact');
+    if (input) {
+      input.addEventListener('input', function() {
+        this.classList.remove('error');
+        const errEl = document.getElementById('ledger-quote-error');
+        if (errEl) errEl.textContent = '';
+      });
+    }
+  }
 
   // ── Blanket discount apply: lets the user push a single stated-discount %
   //    across every matched scan result (or every item in a category) without
@@ -3613,6 +4472,7 @@ function initScanScreen() {
       syncScanResultsToSelected();
       scanResults.forEach((r, i) => { if (r.matched && r.calc) recalcScanCard(i); });
       recalcScanTotals();
+      renderLedgerSummary();
       // Update each card's disc input so the user sees the value they applied
       // (we mutated r.calc.disc, not the DOM inputs).
       document.querySelectorAll('[data-scan-input="disc"]').forEach(inp => {
